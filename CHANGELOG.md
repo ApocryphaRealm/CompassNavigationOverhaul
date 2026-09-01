@@ -23,9 +23,14 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   `rules-version.ps1 -Action bump`. If a number was typed by hand, it is wrong until the tool
 >   agrees.
 
-## 1.1.1 - 2026-08-27 - untested
+## 1.1.1 - 2026-09-01 - working
 
 ### Fixed
+- The settings menu registers with Apocrypha Menu Framework (AMF) by its real module name,
+  with stock SKSE Menu Framework as the fallback - on an AMF stack the page previously never
+  registered and the menu was silently absent. Same fix as Dragon's Eye Minimap 1.5.8.
+- The .pdb debug symbols now ship inside the main download so Crash Logger can resolve this
+  mod's stack frames. There is no separate Debug Symbols download.
 - Settings saved in game were lost on reload: Save() wrote the INI with plain file I/O, but Init() and Reload() read it back through INISettingCollection::ReadFromFile, which uses the Win32 profile API that PrivateProfileRedirector hooks and caches - so a reload was served the values from game start, and the Redirector could later flush its stale cache back over the file. Settings are now parsed straight from the INI with plain file I/O and preferred over the collection, which is left holding only the compiled-in defaults; the plugin never hands its INI to the profile API in either direction, so it behaves identically with or without the Redirector installed. Same fix as Dragon's Eye Minimap 1.5.7.
 
 ## 1.1.0 - 2026-08-27 - working
