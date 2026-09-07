@@ -13,6 +13,7 @@
 
 #include "Hooks.h"
 #include "UI.h"
+#include "utils/Strings.h"
 
 #undef GetModuleHandle
 
@@ -104,6 +105,8 @@ void SKSEMessageListener(SKSE::MessagingInterface::Message* a_msg)
 	}
 	else if (a_msg->type == SKSE::MessagingInterface::kDataLoaded)
 	{
+		strings::Configure("CompassNavigationOverhaul");
+
 		// Second and last attempt at the NND API (CLAUDE.md rule 17). By kDataLoaded every
 		// plugin has finished loading, so if it is not available now it is not installed.
 		NND::NPCNameProvider::GetSingleton()->RequestAPI();

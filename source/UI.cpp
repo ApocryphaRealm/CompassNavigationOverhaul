@@ -6,9 +6,12 @@
 #include "Settings.h"
 
 #include "utils/Logger.h"
+#include "utils/Strings.h"
 #include "utils/Toggle.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
 namespace UI
 {
@@ -20,6 +23,8 @@ namespace UI
 		std::string selectedSlider;
 
 		constexpr const char* kLogLevelNames[] = { "Trace", "Debug", "Info", "Warning", "Error", "Critical", "Off" };
+		constexpr const char* kLogLevelKeys[] = { "CNO_LogLevel_Trace", "CNO_LogLevel_Debug", "CNO_LogLevel_Info",
+													"CNO_LogLevel_Warning", "CNO_LogLevel_Error", "CNO_LogLevel_Critical", "CNO_LogLevel_Off" };
 		constexpr int kLogLevelCount = 7;
 
 		// The framework renders from the renderer's present hook, which is not the thread
@@ -122,7 +127,7 @@ namespace UI
 				}
 
 				ImGuiMCP::SameLine();
-				ImGuiMCP::TextDisabled("<-->");
+				ImGuiMCP::TextDisabled("%s", strings::TR("CNO_SliderNudge", "<-->"));
 			}
 
 			return changed;
@@ -131,7 +136,7 @@ namespace UI
 		void HelpMarker(const char* a_description)
 		{
 			ImGuiMCP::SameLine();
-			ImGuiMCP::TextDisabled("(?)");
+			ImGuiMCP::TextDisabled("%s", strings::TR("CNO_HelpMark", "(?)"));
 
 			if (ImGuiMCP::IsItemHovered())
 			{
@@ -153,113 +158,125 @@ namespace UI
 		{
 			using namespace settings::display;
 
-			ImGuiMCP::SeparatorText("Compass and markers");
+			ImGuiMCP::SeparatorText(strings::TR("CNO_Title", "Compass and markers"));
 
-			if (ImGuiMCP::Toggle("Use metric units", &useMetricUnits))
+			if (ImGuiMCP::Toggle(strings::TR("CNO_UseMetricUnits", "Use metric units"), &useMetricUnits))
 			{
 				ApplyUseMetricUnits();
 			}
-			HelpMarker("Shows distances to markers in meters instead of the vanilla feet.");
+			HelpMarker(strings::TR("CNO_HelpUseMetricUnits", "Shows distances to markers in meters instead of the vanilla feet."));
 
-			ImGuiMCP::Toggle("Show undiscovered location markers", &showUndiscoveredLocationMarkers);
-			ImGuiMCP::Toggle("Undiscovered means unknown marker", &undiscoveredMeansUnknownMarkers);
-			HelpMarker("Shows a generic marker instead of the location's real icon until you discover it.");
-			ImGuiMCP::Toggle("Undiscovered means unknown info", &undiscoveredMeansUnknownInfo);
-			HelpMarker("Hides the location's name and distance on the compass until you discover it.");
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowUndiscoveredLocationMarkers", "Show undiscovered location markers"), &showUndiscoveredLocationMarkers);
+			ImGuiMCP::Toggle(strings::TR("CNO_UndiscoveredMeansUnknownMarkers", "Undiscovered means unknown marker"), &undiscoveredMeansUnknownMarkers);
+			HelpMarker(strings::TR("CNO_HelpUndiscoveredMeansUnknownMarkers", "Shows a generic marker instead of the location's real icon until you discover it."));
+			ImGuiMCP::Toggle(strings::TR("CNO_UndiscoveredMeansUnknownInfo", "Undiscovered means unknown info"), &undiscoveredMeansUnknownInfo);
+			HelpMarker(strings::TR("CNO_HelpUndiscoveredMeansUnknownInfo", "Hides the location's name and distance on the compass until you discover it."));
 
-			ImGuiMCP::Toggle("Show enemy markers", &showEnemyMarkers);
-			ImGuiMCP::Toggle("Show enemy name under marker", &showEnemyNameUnderMarker);
-			ImGuiMCP::Toggle("Show interior markers", &showInteriorMarkers);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowEnemyMarkers", "Show enemy markers"), &showEnemyMarkers);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowEnemyNameUnderMarker", "Show enemy name under marker"), &showEnemyNameUnderMarker);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowInteriorMarkers", "Show interior markers"), &showInteriorMarkers);
 
-			ImGuiMCP::Toggle("Show objective as target", &showObjectiveAsTarget);
-			ImGuiMCP::Toggle("Show other objectives count", &showOtherObjectivesCount);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowObjectiveAsTarget", "Show objective as target"), &showObjectiveAsTarget);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowOtherObjectivesCount", "Show other objectives count"), &showOtherObjectivesCount);
 
-			NudgeableSlider("Angle to show marker details", &angleToShowMarkerDetails, 0.0F, 90.0F, "%.0f", 1.0F);
-			HelpMarker("How close to the center of the compass a marker has to be before its name and distance appear.");
-			NudgeableSlider("Angle to keep marker details shown", &angleToKeepMarkerDetailsShown, 0.0F, 90.0F, "%.0f", 1.0F);
-			HelpMarker("Once shown, a marker's details stay visible until it drifts past this wider angle - keeps the text from flickering right at the threshold.");
-			NudgeableSlider("Focusing delay to show", &focusingDelayToShow, 0.0F, 2.0F, "%.2f", 0.01F);
-			HelpMarker("How long a marker has to stay within the angle above before its details appear.");
+			NudgeableSlider(strings::TR("CNO_AngleToShowMarkerDetails", "Angle to show marker details"), &angleToShowMarkerDetails, 0.0F, 90.0F, "%.0f", 1.0F);
+			HelpMarker(strings::TR("CNO_HelpAngleToShowMarkerDetails", "How close to the center of the compass a marker has to be before its name and distance appear."));
+			NudgeableSlider(strings::TR("CNO_AngleToKeepMarkerDetailsShown", "Angle to keep marker details shown"), &angleToKeepMarkerDetailsShown, 0.0F, 90.0F, "%.0f", 1.0F);
+			HelpMarker(strings::TR("CNO_HelpAngleToKeepMarkerDetailsShown", "Once shown, a marker's details stay visible until it drifts past this wider angle - keeps the text from flickering right at the threshold."));
+			NudgeableSlider(strings::TR("CNO_FocusingDelayToShow", "Focusing delay to show"), &focusingDelayToShow, 0.0F, 2.0F, "%.2f", 0.01F);
+			HelpMarker(strings::TR("CNO_HelpFocusingDelayToShow", "How long a marker has to stay within the angle above before its details appear."));
 		}
 
 		void RenderQuestListSection()
 		{
 			using namespace settings::questlist;
 
-			ImGuiMCP::SeparatorText("Quest list");
+			ImGuiMCP::SeparatorText(strings::TR("CNO_QuestListTitle", "Quest list"));
 
-			NudgeableSlider("Position X", &positionX, 0.0F, 1.0F, "%.3f", 0.01F);
-			NudgeableSlider("Position Y", &positionY, 0.0F, 1.0F, "%.3f", 0.01F);
-			NudgeableSlider("Max height", &maxHeight, 0.0F, 1.0F, "%.2f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_PositionX", "Position X"), &positionX, 0.0F, 1.0F, "%.3f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_PositionY", "Position Y"), &positionY, 0.0F, 1.0F, "%.3f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_MaxHeight", "Max height"), &maxHeight, 0.0F, 1.0F, "%.2f", 0.01F);
 
-			ImGuiMCP::Toggle("Show in exteriors", &showInExteriors);
-			ImGuiMCP::Toggle("Show in interiors", &showInInteriors);
-			ImGuiMCP::Toggle("Hide in combat", &hideInCombat);
-			HelpMarker("Hides the quest list entirely while a weapon or spell is drawn.");
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowInExteriors", "Show in exteriors"), &showInExteriors);
+			ImGuiMCP::Toggle(strings::TR("CNO_ShowInInteriors", "Show in interiors"), &showInInteriors);
+			ImGuiMCP::Toggle(strings::TR("CNO_HideInCombat", "Hide in combat"), &hideInCombat);
+			HelpMarker(strings::TR("CNO_HelpHideInCombat", "Hides the quest list entirely while a weapon or spell is drawn."));
 
-			NudgeableSlider("Walking delay to show", &walkingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
-			NudgeableSlider("Jogging delay to show", &joggingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
-			NudgeableSlider("Sprinting delay to show", &sprintingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
-			HelpMarker("How long you have to move at each pace before the quest list fades in.");
+			NudgeableSlider(strings::TR("CNO_WalkingDelayToShow", "Walking delay to show"), &walkingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_JoggingDelayToShow", "Jogging delay to show"), &joggingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_SprintingDelayToShow", "Sprinting delay to show"), &sprintingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
+			HelpMarker(strings::TR("CNO_HelpPaceDelays", "How long you have to move at each pace before the quest list fades in."));
 		}
 
 		void RenderDebugSection()
 		{
 			using namespace settings;
 
-			ImGuiMCP::SeparatorText("Debug");
+			ImGuiMCP::SeparatorText(strings::TR("CNO_Debug", "Debug"));
 
 			int level = static_cast<int>(debug::logLevel);
-			if (ImGuiMCP::Combo("Log level", &level, kLogLevelNames, kLogLevelCount))
+			// Rebuilt from TR'd entries every frame (plan 2.2); labelStore owns the translated
+			// bytes for this call so the const char* pointers handed to Combo stay valid.
+			std::vector<std::string> logLevelLabelStore;
+			logLevelLabelStore.reserve(kLogLevelCount);
+			for (int i = 0; i < kLogLevelCount; ++i)
+			{
+				logLevelLabelStore.push_back(strings::TR(kLogLevelKeys[i], kLogLevelNames[i]));
+			}
+			std::vector<const char*> logLevelLabels;
+			logLevelLabels.reserve(logLevelLabelStore.size());
+			for (const auto& s : logLevelLabelStore) { logLevelLabels.push_back(s.c_str()); }
+			if (ImGuiMCP::Combo(strings::TR("CNO_LogLevel", "Log level"), &level, logLevelLabels.data(), kLogLevelCount))
 			{
 				debug::logLevel = static_cast<logger::level>(level);
 
 				OnMainThread([]() { logger::set_level(settings::debug::logLevel, settings::debug::logLevel); });
 			}
-			HelpMarker("Applies to the log immediately.");
+			HelpMarker(strings::TR("CNO_HelpLogLevel", "Applies to the log immediately."));
 		}
 
 		void RenderButtons()
 		{
-			if (ImGuiMCP::Button("Save"))
+			if (ImGuiMCP::Button(strings::TR("CNO_SaveBtn", "Save")))
 			{
 				OnMainThread([]() {
-					statusMessage = settings::Save() ? "Settings saved." : "Could not save the INI. See the log for why.";
+					statusMessage = settings::Save() ? strings::TR("CNO_StatusSaved", "Settings saved.")
+													   : strings::TR("CNO_StatusSaveFail", "Could not save the INI. See the log for why.");
 				});
 			}
-			HelpMarker("Writes every setting above back to the INI. Comments and unrelated keys are left alone.");
+			HelpMarker(strings::TR("CNO_HelpSave", "Writes every setting above back to the INI. Comments and unrelated keys are left alone."));
 
 			ImGuiMCP::SameLine();
 
-			if (ImGuiMCP::Button("Reload from INI"))
+			if (ImGuiMCP::Button(strings::TR("CNO_ReloadBtn", "Reload from INI")))
 			{
 				OnMainThread([]() {
 					if (settings::Reload())
 					{
 						ApplyLiveSettings();
 
-						statusMessage = "Settings reloaded from the INI.";
+						statusMessage = strings::TR("CNO_StatusReloaded", "Settings reloaded from the INI.");
 					}
 					else
 					{
-						statusMessage = "Could not read the INI. See the log for why.";
+						statusMessage = strings::TR("CNO_StatusReloadFail", "Could not read the INI. See the log for why.");
 					}
 				});
 			}
-			HelpMarker("Throws away any change made here since the last save and re-reads the INI from disk. Also picks up edits made to the file by hand.");
+			HelpMarker(strings::TR("CNO_HelpReload", "Throws away any change made here since the last save and re-reads the INI from disk. Also picks up edits made to the file by hand."));
 
 			ImGuiMCP::SameLine();
 
-			if (ImGuiMCP::Button("Restore defaults"))
+			if (ImGuiMCP::Button(strings::TR("CNO_RestoreBtn", "Restore defaults")))
 			{
 				OnMainThread([]() {
 					settings::RestoreDefaults();
 					ApplyLiveSettings();
 				});
 
-				statusMessage = "Defaults restored. Press Save to keep them.";
+				statusMessage = strings::TR("CNO_StatusRestored", "Defaults restored. Press Save to keep them.");
 			}
-			HelpMarker("Puts every setting back to the value it has on a fresh install. Nothing is written until you press Save.");
+			HelpMarker(strings::TR("CNO_HelpRestore", "Puts every setting back to the value it has on a fresh install. Nothing is written until you press Save."));
 
 			if (!statusMessage.empty())
 			{
@@ -304,7 +321,9 @@ namespace UI
 
 	void __stdcall SettingsPanel::Render()
 	{
-		ImGuiMCP::TextWrapped("Most settings apply as soon as you make them. Press Save to keep them for the next time you play.");
+		strings::Tick();
+
+		ImGuiMCP::TextWrapped("%s", strings::TR("CNO_Intro", "Most settings apply as soon as you make them. Press Save to keep them for the next time you play."));
 		ImGuiMCP::Spacing();
 
 		ImGuiMCP::PushItemWidth(260.0F);

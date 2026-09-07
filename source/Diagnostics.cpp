@@ -3,6 +3,7 @@
 #include "DevBench/DevBenchAPI.h"
 #include "Settings.h"
 #include "utils/Logger.h"
+#include "utils/Strings.h"
 
 #include <array>
 #include <chrono>
@@ -359,8 +360,36 @@ namespace diagnostics
 				SecondsAgoField("lastFocusChange", state.lastFocusChange));
 		}
 
-		void StatusTool(void*, const char*, void* a_sink, DevBenchAPI::WriteFn a_write)
+		// Reads "op" out of the args JSON without pulling in a parser: the strings are this
+		// tool's own, and a driving tool that needed a JSON library to answer one question
+		// would be worse than the question.
+		std::string ArgString(const std::string& a_args, const char* a_key)
 		{
+			const std::string needle = std::string("\"") + a_key + "\"";
+			const auto at = a_args.find(needle);
+			if (at == std::string::npos) { return {}; }
+			const auto colon = a_args.find(':', at + needle.size());
+			if (colon == std::string::npos) { return {}; }
+			auto start = a_args.find_first_not_of(" \t", colon + 1);
+			if (start == std::string::npos) { return {}; }
+			if (a_args[start] == '"') {
+				const auto end = a_args.find('"', start + 1);
+				return end == std::string::npos ? std::string{} : a_args.substr(start + 1, end - start - 1);
+			}
+			const auto end = a_args.find_first_of(",}", start);
+			return a_args.substr(start, (end == std::string::npos ? a_args.size() : end) - start);
+		}
+
+		void StatusTool(void*, const char* a_argsJson, void* a_sink, DevBenchAPI::WriteFn a_write)
+		{
+			const std::string args = a_argsJson ? a_argsJson : "{}";
+			if (ArgString(args, "op") == "strings")
+			{
+				const std::string stringsReply = std::format(R"({{"ok":true,"op":"strings","strings":{}}})", strings::StatusJson());
+				a_write(a_sink, stringsReply.c_str());
+				return;
+			}
+
 			std::string json;
 
 			{
@@ -421,8 +450,9 @@ namespace diagnostics
 			"\"description\":\"Live Compass Navigation Overhaul state: current settings, which "
 			"hook groups installed, whether the CoMAP compatibility patch applied or was skipped "
 			"and why, the Infinity UI HUD patch lifecycle, and per-frame marker/compass-update "
-			"counters.\","
-			"\"inputSchema\":{\"type\":\"object\",\"properties\":{}},"
+			"counters. op=strings reports the active language, source and loaded translation "
+			"count.\","
+			"\"inputSchema\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"}}},"
 			"\"readOnly\":true"
 			"}";
 
