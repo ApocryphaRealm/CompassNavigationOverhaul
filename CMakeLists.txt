@@ -6,7 +6,7 @@
 
 project(
 	CompassNavigationOverhaul
-	VERSION 1.1.3
+	VERSION 1.1.4
 	LANGUAGES CXX
 )
 

@@ -25,6 +25,11 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.1.4 - 2026-09-17 - untested
+
+### Added
+- **The Address Library check speaks before CommonLib can fail** (oproso on the Nexus page, 16-17 Sep 2026, Fluorine on SteamOS: *"failed to open the address library file"* from this patch and from Wheeler). That line is CommonLibSSE-NG's, raised the first time an address is resolved, and it names neither the file it wanted, the folder it looked in nor the game version it decided on. Before this plugin resolves anything it now writes all of that to its log - runtime and edition, the executable it read them from, the exact file (`versionlib-<v>.bin` for AE, `version-<v>.bin` for SE), the working directory the path is relative to, whether the file is there and whether it is beside the executable instead - and when the file is missing shows a message with the same facts and loads inert so the game continues. `include/AddressLibraryGuard.h` is the shared guard from Wheeler - Refined 1.2.9; `APOCRYPHA_SIMULATE_MISSING_ADDRESS_LIBRARY=1` in the environment drives the failure path for a proof.
+
 ## 1.1.3 - 2026-09-16 - untested
 
 ### Changed
