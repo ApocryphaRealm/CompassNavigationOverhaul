@@ -33,9 +33,14 @@ namespace hooks
 
 			auto player = RE::PlayerCharacter::GetSingleton();
 
+#if RUNTIME_LINE == 17
+			// CommonLibSSE-NG 7.2: no VR on this line, and GetPlayerRuntimeData() already applies 1.7.99's +8 shift
+			RE::BSTArray<RE::BGSInstancedQuestObjective>& playerObjectives = player->GetPlayerRuntimeData().objectives;
+#else
 			RE::BSTArray<RE::BGSInstancedQuestObjective>& playerObjectives = REL::Module::IsVR() ?
 																				player->GetVRPlayerRuntimeData().objectives :
 																				player->GetPlayerRuntimeData().objectives;
+#endif
 
 			// The objectives are in oldest-to-newest order, so we iterate from newest-to-oldest
 			// to have it in the same order as in the journal

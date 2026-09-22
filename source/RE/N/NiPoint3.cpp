@@ -4,6 +4,8 @@
 
 namespace RE
 {
+// Line 17: CommonLibSSE-NG 7.2's library defines these itself; only the dot product and GetHorizontalAngleTo are ours alone.
+#if RUNTIME_LINE != 17
 	float& NiPoint3::operator[](std::size_t a_idx)
 	{
 		assert(a_idx < 3);
@@ -36,11 +38,13 @@ namespace RE
 		return NiPoint3(x - a_rhs.x, y - a_rhs.y, z - a_rhs.z);
 	}
 
+#endif
 	float NiPoint3::operator*(const NiPoint3& a_rhs) const
 	{
 		return x * a_rhs.x + y * a_rhs.y + z * a_rhs.z;
 	}
 
+#if RUNTIME_LINE != 17
 	NiPoint3 NiPoint3::operator*(float a_scalar) const
 	{
 		return NiPoint3(x * a_scalar, y * a_scalar, z * a_scalar);
@@ -160,6 +164,7 @@ namespace RE
 		return length;
 	}
 
+#endif
 	float NiPoint3::GetHorizontalAngleTo(const NiPoint3& a_pt) const
 	{
 		NiPoint3 diff{ a_pt.x - x, a_pt.y - y, a_pt.z - z };
