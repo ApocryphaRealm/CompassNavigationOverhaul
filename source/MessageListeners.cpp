@@ -92,6 +92,34 @@ void SKSEMessageListener(SKSE::MessagingInterface::Message* a_msg)
 
 			diagnostics::RecordComapPatchNotAttempted("MapMarkerFramework (CoMAP) is not installed");
 		}
+
+		// Quest Marker Limit Fix (Nexus 189762, AE 1.6.1170 only). Detection is for the log and the status tool: the
+		// deferred quest-marker path needs no coordination with it. Since this build raises the cap itself, that mod
+		// is a leftover when both are installed - and its swallow-and-replay of quest markers is what breaks hover
+		// details in an interior entered from another interior and after a quest completes, so say to remove it.
+		const SKSE::PluginInfo* questMarkerLimitFixPluginInfo = skse->GetPluginInfo("Quest Marker Limit Fix");
+
+		diagnostics::RecordQmlfDetection(questMarkerLimitFixPluginInfo != nullptr,
+			questMarkerLimitFixPluginInfo ? questMarkerLimitFixPluginInfo->version : 0);
+
+		if (questMarkerLimitFixPluginInfo)
+		{
+			if (hooks::QuestMarkerLimit::IsInstalled())
+			{
+				logger::warn("Quest Marker Limit Fix is installed alongside this mod's own quest marker cap raise. Remove "
+							 "Quest Marker Limit Fix: with the cap raised here it adds nothing, and its replayed quest "
+							 "markers are what lose this mod's hover details in some interiors and after quests complete");
+			}
+			else
+			{
+				logger::info("Quest Marker Limit Fix detected; the quest markers it replays will be matched to their "
+							 "compass slots at the end of each frame");
+			}
+		}
+		else
+		{
+			logger::debug("Quest Marker Limit Fix is not installed; quest markers are processed at their AddMarker calls");
+		}
 	}
 	else if (a_msg->type == SKSE::MessagingInterface::kPostPostLoad)
 	{

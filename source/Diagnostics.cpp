@@ -57,6 +57,23 @@ namespace diagnostics
 			std::uint32_t comapVersion = 0;
 			std::optional<clock::time_point> lastComapDecision;
 
+			// Quest Marker Limit Fix compatibility
+			bool qmlfDetected = false;
+			bool qmlfDetectionRun = false;
+			std::uint32_t qmlfVersion = 0;
+			std::uint64_t questMarkersReconciled = 0;
+			std::uint64_t questMarkersUnmatched = 0;
+			std::size_t lastReconcileMatched = 0;
+			std::size_t lastReconcileUnmatched = 0;
+			std::optional<clock::time_point> lastQuestMarkerReconcile;
+
+			// Built-in quest marker cap (hooks::QuestMarkerLimit)
+			bool questMarkerLimitApplied = false;
+			std::size_t questMarkerLimitOffset = 0;
+			std::uint32_t questMarkerLimitValue = 0;
+			std::string questMarkerLimitNote = "the patch decision has not been made yet (hooks::Install() was not reached)";
+			std::optional<clock::time_point> lastQuestMarkerLimit;
+
 			// Infinity UI / HUD patch lifecycle
 			bool infinityUiListenerAttempted = false;
 			bool infinityUiListenerRegistered = false;
@@ -192,7 +209,8 @@ namespace diagnostics
 				"\"showInteriorMarkers\":{},"
 				"\"angleToShowMarkerDetails\":{:.2f},"
 				"\"angleToKeepMarkerDetailsShown\":{:.2f},"
-				"\"focusingDelayToShow\":{:.2f}"
+				"\"focusingDelayToShow\":{:.2f},"
+				"\"questMarkerLimit\":{}"
 				"}},"
 				"\"questList\":{{"
 				"\"showInExteriors\":{},"
@@ -219,6 +237,7 @@ namespace diagnostics
 				settings::display::angleToShowMarkerDetails,
 				settings::display::angleToKeepMarkerDetailsShown,
 				settings::display::focusingDelayToShow,
+				settings::display::questMarkerLimit,
 				Bool(settings::questlist::showInExteriors),
 				Bool(settings::questlist::showInInteriors),
 				Bool(settings::questlist::hideInCombat),
@@ -284,6 +303,52 @@ namespace diagnostics
 				DecodeVersion(state.comapVersion),
 				state.comapVersion,
 				SecondsAgoField("lastDecision", state.lastComapDecision));
+		}
+
+		// Caller holds mtx.
+		std::string BuildQmlfJson()
+		{
+			return std::format(
+				"\"questMarkerLimitFix\":{{"
+				"\"detectionRun\":{},"
+				"\"detected\":{},"
+				"\"detectedVersion\":\"{}\","
+				"\"detectedVersionRaw\":{},"
+				"\"reconciliation\":{{"
+				"\"matchedTotal\":{},"
+				"\"unmatchedTotal\":{},"
+				"\"lastMatched\":{},"
+				"\"lastUnmatched\":{},"
+				"{}"
+				"}}"
+				"}}",
+				Bool(state.qmlfDetectionRun),
+				Bool(state.qmlfDetected),
+				DecodeVersion(state.qmlfVersion),
+				state.qmlfVersion,
+				state.questMarkersReconciled,
+				state.questMarkersUnmatched,
+				state.lastReconcileMatched,
+				state.lastReconcileUnmatched,
+				SecondsAgoField("last", state.lastQuestMarkerReconcile));
+		}
+
+		// Caller holds mtx.
+		std::string BuildQuestMarkerLimitJson()
+		{
+			return std::format(
+				"\"questMarkerLimit\":{{"
+				"\"applied\":{},"
+				"\"offset\":{},"
+				"\"limit\":{},"
+				"\"note\":\"{}\","
+				"{}"
+				"}}",
+				Bool(state.questMarkerLimitApplied),
+				state.questMarkerLimitOffset,
+				state.questMarkerLimitValue,
+				EscapeJson(state.questMarkerLimitNote),
+				SecondsAgoField("last", state.lastQuestMarkerLimit));
 		}
 
 		// Caller holds mtx.
@@ -402,6 +467,10 @@ namespace diagnostics
 				json += ',';
 				json += BuildComapJson();
 				json += ',';
+				json += BuildQmlfJson();
+				json += ',';
+				json += BuildQuestMarkerLimitJson();
+				json += ',';
 				json += BuildInfinityUiJson();
 				json += ',';
 				json += BuildMarkersJson();
@@ -449,7 +518,8 @@ namespace diagnostics
 			"{"
 			"\"description\":\"Live Compass Navigation Overhaul state: current settings, which "
 			"hook groups installed, whether the CoMAP compatibility patch applied or was skipped "
-			"and why, the Infinity UI HUD patch lifecycle, and per-frame marker/compass-update "
+			"and why, the built-in quest marker cap, Quest Marker Limit Fix detection and "
+			"deferred quest-marker reconciliation counts, the Infinity UI HUD patch lifecycle, and per-frame marker/compass-update "
 			"counters. op=strings reports the active language, source and loaded translation "
 			"count.\","
 			"\"inputSchema\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"}}},"
@@ -468,6 +538,37 @@ namespace diagnostics
 		}
 
 		registered = true;
+	}
+
+	void RecordQmlfDetection(bool a_present, std::uint32_t a_version)
+	{
+		std::scoped_lock lock(mtx);
+
+		state.qmlfDetectionRun = true;
+		state.qmlfDetected = a_present;
+		state.qmlfVersion = a_version;
+	}
+
+	void RecordQuestMarkersReconciled(std::size_t a_matched, std::size_t a_unmatched)
+	{
+		std::scoped_lock lock(mtx);
+
+		state.questMarkersReconciled += a_matched;
+		state.questMarkersUnmatched += a_unmatched;
+		state.lastReconcileMatched = a_matched;
+		state.lastReconcileUnmatched = a_unmatched;
+		state.lastQuestMarkerReconcile = clock::now();
+	}
+
+	void RecordQuestMarkerLimitPatch(bool a_applied, std::size_t a_offset, std::uint32_t a_limit, std::string_view a_note)
+	{
+		std::scoped_lock lock(mtx);
+
+		state.questMarkerLimitApplied = a_applied;
+		state.questMarkerLimitOffset = a_offset;
+		state.questMarkerLimitValue = a_limit;
+		state.questMarkerLimitNote = a_note;
+		state.lastQuestMarkerLimit = clock::now();
 	}
 
 	void RecordHookInstallStarted()

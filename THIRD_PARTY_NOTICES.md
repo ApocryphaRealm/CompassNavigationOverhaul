@@ -34,3 +34,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## hidden-kc's fork (GPL-3.0-or-later)
+
+The Quest Marker Limit Fix compatibility in 1.1.6 - the end-of-frame reconciliation of quest markers another
+mod replays, and the built-in quest marker cap - is ported from hidden-kc's fork of this mod
+(https://github.com/hidden-kc/CompassNavigationOverhaul, their 1.1.2 and 1.1.4), which is GPL-3.0-or-later like
+this one. It was adapted to this code base; the fork's distance filter was not taken.

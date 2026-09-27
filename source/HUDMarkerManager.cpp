@@ -11,7 +11,8 @@
 namespace CNO
 {
 	void HUDMarkerManager::ProcessQuestMarker(RE::TESQuest* a_quest, RE::BGSInstancedQuestObjective* a_questObjective,
-											  int a_questAgeIndex, RE::TESObjectREFR* a_marker, std::uint32_t a_markerIcon)
+											  int a_questAgeIndex, RE::TESObjectREFR* a_marker, std::uint32_t a_markerIcon,
+											  std::uint32_t a_slotIndex)
 	{
 		// A bare counter increment, deliberately: the game's own marker loop calls this once per
 		// quest marker per frame, so anything that allocated here would be on the HUD path.
@@ -62,7 +63,7 @@ namespace CNO
 			}
 
 			facedMarkers.emplace_back(a_marker, angleToPlayerCamera,
-									  hudMarkerManager->currentMarkerIndex - 1,
+									  a_slotIndex,
 									  a_markerIcon, description);
 
 			RE::QUEST_DATA::Type questType = a_quest->GetType();
@@ -97,10 +98,78 @@ namespace CNO
 		}
 	}
 
+	void HUDMarkerManager::DeferQuestMarker(RE::TESObjectREFR* a_marker, const RE::NiPoint3& a_position,
+											RE::TESQuest* a_quest, RE::BGSInstancedQuestObjective* a_questObjective,
+											int a_questAgeIndex, std::uint32_t a_markerIcon)
+	{
+		// Bounded by the array size: no deferred target can be committed beyond kMarkerSlotCount slots, so keeping
+		// more than that would only be work reconciliation can never match.
+		if (pendingQuestMarkers.size() >= kMarkerSlotCount)
+		{
+			return;
+		}
+
+		pendingQuestMarkers.push_back(
+			PendingQuestMarker{ a_marker, a_position, a_quest, a_questObjective, a_questAgeIndex, a_markerIcon });
+	}
+
+	// Runs from SetMarkersExtraInfo(), after every AddMarker this frame - including ones made straight against the
+	// original function by a marker-limit mod that bypassed our call-site hooks, and after any slot shuffling such a
+	// mod did to evict markers. The array carries no handles, so a deferred target is matched by the exact position
+	// the game handed its AddMarker call: whatever committed it copied that same position into the slot, and eviction
+	// moves entries without changing their values. Slots this mod committed itself are claimed and never matched.
+	void HUDMarkerManager::ReconcilePendingQuestMarkers()
+	{
+		const std::uint32_t markerCount = (std::min)(hudMarkerManager->currentMarkerIndex, kMarkerSlotCount);
+
+		std::size_t matched = 0;
+		std::size_t unmatched = 0;
+
+		for (const PendingQuestMarker& pending : pendingQuestMarkers)
+		{
+			std::uint32_t slot = kMarkerSlotCount;
+
+			for (std::uint32_t i = 0; i < markerCount; i++)
+			{
+				if (!claimedSlots[i] && hudMarkerManager->position[i] == pending.position)
+				{
+					slot = i;
+
+					break;
+				}
+			}
+
+			if (slot == kMarkerSlotCount)
+			{
+				// Not on the compass this frame - whoever declined it chose not to commit it. Also the failure mode
+				// if the exact-position assumption ever stops holding, and a cosmetic one: the marker still shows,
+				// only its hover details are missing for that frame.
+				++unmatched;
+
+				continue;
+			}
+
+			ProcessQuestMarker(pending.quest, pending.questObjective, pending.questAgeIndex, pending.marker,
+							   pending.markerIcon, slot);
+
+			++matched;
+		}
+
+		if (matched != 0 || unmatched != 0)
+		{
+			diagnostics::RecordQuestMarkersReconciled(matched, unmatched);
+		}
+
+		DiscardPendingQuestMarkers();
+	}
+
 	void HUDMarkerManager::ProcessLocationMarker(RE::ExtraMapMarker* a_mapMarker, RE::TESObjectREFR* a_marker,
 												 std::uint32_t a_markerIcon)
 	{
 		diagnostics::RecordLocationMarkerProcessed();
+
+		// Claimed before the angle test: a deferred quest target may only match a slot this mod did not commit.
+		ClaimSlot(hudMarkerManager->currentMarkerIndex - 1);
 
 		float angleToPlayerCamera = GetAngleBetween(playerCamera, a_marker);
 
@@ -129,6 +198,8 @@ namespace CNO
 	{
 		diagnostics::RecordEnemyMarkerProcessed();
 
+		ClaimSlot(hudMarkerManager->currentMarkerIndex - 1);
+
 		float angleToPlayerCamera = GetAngleBetween(playerCamera, a_enemy);
 
 		if ((IsTheFocusedMarker(a_enemy) && angleToPlayerCamera < keepFocusedAngle) ||
@@ -145,6 +216,8 @@ namespace CNO
 	void HUDMarkerManager::ProcessPlayerSetMarker(RE::TESObjectREFR* a_marker, std::uint32_t a_markerIcon)
 	{
 		diagnostics::RecordPlayerSetMarkerProcessed();
+
+		ClaimSlot(hudMarkerManager->currentMarkerIndex - 1);
 
 		float angleToPlayerCamera = GetAngleBetween(playerCamera, a_marker);
 
@@ -173,6 +246,8 @@ namespace CNO
 			diagnostics::RecordCompassUpdateSkipped("the Compass singleton was not ready (the Infinity UI "
 													"HUD patch has not delivered the replaced instance yet)");
 
+			DiscardPendingQuestMarkers();
+
 			return;
 		}
 
@@ -185,8 +260,14 @@ namespace CNO
 			diagnostics::RecordCompassUpdateSkipped("the QuestItemList singleton was not ready (the Infinity UI "
 													"HUD patch has not delivered the replaced instance yet)");
 
+			DiscardPendingQuestMarkers();
+
 			return;
 		}
+
+		// Before the focus logic, so quest markers a limit mod committed on its own are part of this frame's faced
+		// markers and quest bookkeeping like any marker processed at its AddMarker call.
+		ReconcilePendingQuestMarkers();
 
 		bool focusChanged = UpdateFocusedMarker();
 

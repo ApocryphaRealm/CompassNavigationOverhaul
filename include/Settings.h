@@ -32,7 +32,7 @@ namespace settings
 
 	namespace debug
 	{
-		inline logger::level logLevel = logger::level::trace;
+		inline logger::level logLevel = logger::level::info;
 	}
 
 	namespace display
@@ -49,6 +49,10 @@ namespace settings
 		inline float angleToShowMarkerDetails = 10.0F;
 		inline float angleToKeepMarkerDetailsShown = 35.0F;
 		inline float focusingDelayToShow = 0.07F;
+		// The quest marker cap the game enforces inside HUDMarkerManager::UpdateQuests (vanilla: 16). Read once at load
+		// by hooks::QuestMarkerLimit::Install() and written into the game's code, so a change needs a restart. Clamped
+		// to 16..48 when read: 16 is vanilla, 48 is all the marker array holds.
+		inline std::uint32_t questMarkerLimit = 48;
 	}
 
 	namespace questlist

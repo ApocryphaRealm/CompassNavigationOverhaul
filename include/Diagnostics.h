@@ -82,6 +82,24 @@ namespace diagnostics
 	void RecordComapPatchSkipped(std::string_view a_reason);
 
 	// ---------------------------------------------------------------------------------------
+	// Quest Marker Limit Fix compatibility and the built-in quest marker cap
+	// ---------------------------------------------------------------------------------------
+
+	// Quest Marker Limit Fix was looked for at kPostLoad (SKSE::LoadInterface::GetPluginInfo). Reporting only - the
+	// deferred quest-marker path is passive and works the same whether or not it is installed.
+	void RecordQmlfDetection(bool a_present, std::uint32_t a_version);
+
+	// One reconciliation pass inside SetMarkersExtraInfo() finished. Totals are cumulative; the last pair is what the
+	// most recent pass matched and dropped. All zero with no timestamp means nothing ever needed reconciling - the
+	// expected state without Quest Marker Limit Fix.
+	void RecordQuestMarkersReconciled(std::size_t a_matched, std::size_t a_unmatched);
+
+	// hooks::QuestMarkerLimit::Install() decided. a_applied is false when the cap comparison was not found, held an
+	// unexpected value or could not be written (the runtime then keeps its own cap); a_offset is the comparison's
+	// offset in UpdateQuests (0 when not found); a_note says which case happened.
+	void RecordQuestMarkerLimitPatch(bool a_applied, std::size_t a_offset, std::uint32_t a_limit, std::string_view a_note);
+
+	// ---------------------------------------------------------------------------------------
 	// Infinity UI / HUD patch lifecycle
 	// ---------------------------------------------------------------------------------------
 

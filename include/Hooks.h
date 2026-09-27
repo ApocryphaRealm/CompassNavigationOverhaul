@@ -66,6 +66,28 @@ namespace hooks
 		static inline REL::Relocation<void (*)(RE::Compass*)> Update{ UpdateId };
 	};
 
+	// The game caps quest markers at 16 with a `cmp dword ptr [reg+0x14BC], 16; jae` inside
+	// HUDMarkerManager::UpdateQuests, though the marker array holds 48. Quest Marker Limit Fix raised it by patching
+	// that byte at a hardcoded AE 1.6.1170 address; this is the same one-byte patch, located by scanning the function
+	// (see the .cpp), so a runtime it was never checked on either finds it or keeps its shipped cap. With the cap raised
+	// here that mod has nothing left to do but swallow and replay quest markers - which is what cost this mod its hover
+	// details - so MessageListeners.cpp warns when both are installed. Ported from hidden-kc's fork, 2026-09-26.
+	class QuestMarkerLimit
+	{
+	public:
+		// Writes settings::display::questMarkerLimit into the cap. True when the byte now holds the target, including
+		// when it already did; false when the comparison was not found, held an unexpected value, or could not be
+		// written - the cap is then exactly as the runtime shipped it.
+		static bool Install();
+
+		// Whether the last Install() left the cap at the target; read at kPostLoad to pick the Quest Marker Limit Fix
+		// message.
+		static bool IsInstalled() { return installed; }
+
+	private:
+		static inline bool installed = false;
+	};
+
 	static inline void Install()
 	{
 		// Recorded before anything is written, so a status query after a partial install can
@@ -196,6 +218,11 @@ namespace hooks
 
 		Compass::vTable.write_vfunc(1, UpdateCompass);
 		diagnostics::RecordHookGroupInstalled(diagnostics::HookGroup::kCompassUpdateVFunc);
+
+		// Last, and not one of the trampoline groups: a one-byte data patch inside UpdateQuests, needing no trampoline
+		// space, whose failures are its own (logged and recorded by RecordQuestMarkerLimitPatch) rather than a sign that
+		// the hook installation is incomplete.
+		QuestMarkerLimit::Install();
 
 		diagnostics::RecordHookInstallCompleted();
 	}

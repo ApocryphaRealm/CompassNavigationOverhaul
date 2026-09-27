@@ -25,6 +25,26 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.1.6 - 2026-09-26 - working
+
+### Fixed
+- **Quest markers keep their hover details and quest list with Quest Marker Limit Fix installed** (Nexus 189762, AE 1.6.1170 only). That mod swallows every quest AddMarker call and replays the markers it picks straight into the original function, which our call-site hook never sees, so no quest marker ever got its objective, distance or quest list. A declined quest target is now kept with a copy of its position, and at the end of the frame it is matched to the compass slot something else committed it to, then processed as usual. Without such a mod a declined marker matches nothing and is dropped, so nothing changes. Slots this mod committed itself are never matched; a skipped compass frame discards its pending markers.
+- **The quest marker cap is raised inside this mod, so Quest Marker Limit Fix is no longer needed.** Its replay passes a pointer into a stack frame that has already returned, so in an interior entered from another interior and after a quest completes the replayed positions stop matching and hover details go missing again. The game's own cap (`cmp [reg+0x14BC], 16` in UpdateQuests) is found by scanning the function rather than by a fixed address and set to `uQuestMarkerLimit` (`[Display]`, 16 to 48, default 48, read at start). A cap already at the target is left alone, an unexpected value is never overwritten, and every outcome is logged and shown by the status tool. With both installed the log warns to remove Quest Marker Limit Fix.
+
+### Changed
+- Ships at log level info (`uLogLevel=2`, compiled default to match), the standing default since 2026-09-26. The shipped INI now lives in the repo (`dist\SKSE\Plugins`).
+- The DevBench status tool reports `questMarkerLimit` (applied, offset, limit, why) and `questMarkerLimitFix` (detected, reconciled and unmatched counts).
+
+### Known
+- On Skyrim 1.7.x, Quest Marker Limit Fix's own check requires the cap to still read 16, so with this mod raising it first that plugin refuses to load and SKSE shows its "incompatible plugin" box naming QuestMarkerLimitFix.dll. That is the intended end state - remove it. On AE 1.6.1170 it still loads and this mod's log warns instead. Setting `uQuestMarkerLimit=16` leaves the game's byte untouched for anyone who wants to keep it.
+- This release is the first to ship the Skyrim 1.7 build line (Line-17 in the installer), tested on 1.7.104. The DevBench status tool does not register on that line (the same for every mod of ours on 1.7; DevBench's messaging there is not answered).
+
+### Verified
+- AE 1.6.1170 with Quest Marker Limit Fix: 6,420 replayed quest markers matched to their slots, none unmatched; hover text and quest list on screen. Without it: 27 quest markers per frame (1.1.5 on the same save: 16), hover in Dragonsreach and in the Jarl's quarters. SE 1.5.97: 25 per frame, hover on several markers. 1.7.104: cap raised, hover and quest list on screen.
+
+### Credit
+- Both fixes are ported from hidden-kc's fork of this mod (github.com/hidden-kc/CompassNavigationOverhaul, their 1.1.2 and 1.1.4, verified in game there on AE 1.6.1170), which is GPL-3.0-or-later like this one. Their distance filter (their 1.1.3) is a separate feature and was not taken.
+
 ## 1.1.5 - 2026-09-18 - untested
 
 ### Fixed
