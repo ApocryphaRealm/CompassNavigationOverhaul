@@ -1,5 +1,6 @@
 #include "Hooks.h"
 
+#include "Diagnostics.h"
 #include "Settings.h"
 
 #include "HUDMarkerManager.h"
@@ -197,6 +198,7 @@ namespace hooks
 		// build the structure containing all the targets, objectives, etc. corresponding
 		// to the marker.
 		const bool added = HUDMarkerManager::AddMarker(a_hudMarkerManager, a_markerData, a_pos, a_refHandle, a_markerGotoFrame);
+		diagnostics::RecordQuestMarkerOffer(added);
 
 		RE::TESObjectREFR* marker = RE::TESObjectREFR::LookupByHandle(a_refHandle).get();
 
@@ -301,7 +303,9 @@ namespace hooks
 			// Unvisited markers keep being shown in any case
 			if (settings::display::showUndiscoveredLocationMarkers || mapMarker->mapData->flags.all(RE::MapMarkerData::Flag::kVisible))
 			{
-				if (HUDMarkerManager::AddMarker(a_hudMarkerManager, a_markerData, a_pos, a_refHandle, a_markerGotoFrame)) 
+				const bool added = HUDMarkerManager::AddMarker(a_hudMarkerManager, a_markerData, a_pos, a_refHandle, a_markerGotoFrame);
+				diagnostics::RecordLocationMarkerOffer(added);   // 1.1.7: declined = no slot left (makihaze)
+				if (added)
 				{
 					CNO::HUDMarkerManager::GetSingleton()->ProcessLocationMarker(mapMarker, marker, a_markerGotoFrame);
 
@@ -373,6 +377,7 @@ namespace hooks
 		hooks::Compass::Update(a_compass);
 
 		CNO::HUDMarkerManager::GetSingleton()->SetMarkersExtraInfo();
+		diagnostics::RecordMarkerFrameEnd();
 	}
 
 	namespace compat

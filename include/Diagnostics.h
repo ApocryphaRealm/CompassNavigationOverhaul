@@ -132,6 +132,14 @@ namespace diagnostics
 	void RecordEnemyMarkerProcessed();
 	void RecordPlayerSetMarkerProcessed();
 
+	// 1.1.7 (makihaze, 2026-10-08: location markers missing while many quests are active): every AddMarker offer at the
+	// quest and location call sites, accepted or declined, counted for the frame (atomics - no lock on the HUD path);
+	// RecordMarkerFrameEnd() snapshots the frame once per compass update. The status JSON's markers.lastFrame then says
+	// whether quest markers took the slots and location markers were turned away, measured rather than guessed.
+	void RecordQuestMarkerOffer(bool a_added);
+	void RecordLocationMarkerOffer(bool a_added);
+	void RecordMarkerFrameEnd();
+
 	// End of SetMarkersExtraInfo(), taken just before the per-frame containers are cleared - so
 	// these are the counts that frame actually worked with. All four are sizes already
 	// maintained by the update itself, so snapshotting them costs a lock and four loads.

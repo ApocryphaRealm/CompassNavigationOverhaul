@@ -96,6 +96,10 @@ namespace diagnostics
 			std::uint64_t playerSetMarkersProcessed = 0;
 			std::optional<clock::time_point> lastPlayerSetMarker;
 
+			// 1.1.7: the last complete frame's AddMarker offers (RecordMarkerFrameEnd)
+			std::uint32_t frameQuestAdded = 0, frameQuestDeclined = 0, frameLocationAdded = 0, frameLocationDeclined = 0;
+			std::uint64_t framesWithLocationsDeclined = 0;
+
 			std::uint64_t compassUpdates = 0;
 			std::optional<clock::time_point> lastCompassUpdate;
 			std::size_t lastFacedMarkers = 0;
@@ -113,6 +117,9 @@ namespace diagnostics
 		};
 
 		State state;
+
+		// 1.1.7: this frame's AddMarker offers, counted lock-free on the HUD path (RecordQuestMarkerOffer & co)
+		std::atomic<std::uint32_t> g_questAdded{ 0 }, g_questDeclined{ 0 }, g_locationAdded{ 0 }, g_locationDeclined{ 0 };
 
 		// Escapes the handful of characters JSON requires; every string this module puts into a
 		// value is either a fixed literal from our own code (a skip reason) or a marker
@@ -381,7 +388,9 @@ namespace diagnostics
 				"\"quest\":{{\"processed\":{},{}}},"
 				"\"location\":{{\"processed\":{},{}}},"
 				"\"enemy\":{{\"processed\":{},{}}},"
-				"\"playerSet\":{{\"processed\":{},{}}}"
+				"\"playerSet\":{{\"processed\":{},{}}},"
+				"\"lastFrame\":{{\"questAdded\":{},\"questDeclined\":{},\"locationAdded\":{},\"locationDeclined\":{},"
+				"\"framesWithLocationsDeclined\":{}}}"
 				"}}",
 				state.questMarkersProcessed,
 				SecondsAgoField("last", state.lastQuestMarker),
@@ -390,7 +399,9 @@ namespace diagnostics
 				state.enemyMarkersProcessed,
 				SecondsAgoField("last", state.lastEnemyMarker),
 				state.playerSetMarkersProcessed,
-				SecondsAgoField("last", state.lastPlayerSetMarker));
+				SecondsAgoField("last", state.lastPlayerSetMarker),
+				state.frameQuestAdded, state.frameQuestDeclined, state.frameLocationAdded, state.frameLocationDeclined,
+				state.framesWithLocationsDeclined);
 		}
 
 		// Caller holds mtx.
@@ -686,6 +697,21 @@ namespace diagnostics
 
 		state.questItemListReady = a_ready;
 		state.lastHudPatch = clock::now();
+	}
+
+	void RecordQuestMarkerOffer(bool a_added) { (a_added ? g_questAdded : g_questDeclined).fetch_add(1, std::memory_order_relaxed); }
+	void RecordLocationMarkerOffer(bool a_added) { (a_added ? g_locationAdded : g_locationDeclined).fetch_add(1, std::memory_order_relaxed); }
+
+	void RecordMarkerFrameEnd()
+	{
+		const std::uint32_t qa = g_questAdded.exchange(0), qd = g_questDeclined.exchange(0);
+		const std::uint32_t la = g_locationAdded.exchange(0), ld = g_locationDeclined.exchange(0);
+		std::scoped_lock lock(mtx);
+		state.frameQuestAdded = qa;
+		state.frameQuestDeclined = qd;
+		state.frameLocationAdded = la;
+		state.frameLocationDeclined = ld;
+		if (ld > 0) { ++state.framesWithLocationsDeclined; }
 	}
 
 	void RecordQuestMarkerProcessed()

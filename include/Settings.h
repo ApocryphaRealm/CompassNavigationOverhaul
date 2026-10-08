@@ -52,7 +52,11 @@ namespace settings
 		// The quest marker cap the game enforces inside HUDMarkerManager::UpdateQuests (vanilla: 16). Read once at load
 		// by hooks::QuestMarkerLimit::Install() and written into the game's code, so a change needs a restart. Clamped
 		// to 16..48 when read: 16 is vanilla, 48 is all the marker array holds.
-		inline std::uint32_t questMarkerLimit = 48;
+		// 1.1.7: default 32, not 48 (makihaze, 2026-10-08: no location markers on 1.1.6 with many quests active; "limit in
+		// 16, The map markers appear again"). The 48 slots are shared - quests are added first and locations take what is
+		// left - so a 48 cap let quest markers take every slot. 32 always leaves 16 for locations, enemies and the
+		// player's own marker.
+		inline std::uint32_t questMarkerLimit = 32;
 	}
 
 	namespace questlist

@@ -25,6 +25,14 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.1.7 - 2026-10-08 - untested
+
+### Fixed
+- Location markers no longer vanish while many quests are active (makihaze on Nexus, 2026-10-08: 'limit in 16, The map markers appear again'). The compass's 48 slots are shared and quests are added first; 1.1.6's default quest cap of 48 let quest markers take every slot. uQuestMarkerLimit now defaults to 32, which always leaves 16 for location, enemy and player-set markers (the INI still allows 16-48).
+
+### Added
+- DevBench status: markers.lastFrame counts the last frame's quest and location AddMarker offers, accepted and declined, and framesWithLocationsDeclined - so a test shows directly whether quest markers are still crowding out locations. The second half of makihaze's report (the tracked quest's far destination not shown) is NOT addressed yet: it needs the caller of UpdateQuests mapped first; these counters are for that.
+
 ## 1.1.6 - 2026-09-26 - working
 
 ### Fixed

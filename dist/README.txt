@@ -1,11 +1,14 @@
 ﻿# CompassNavigationOverhaul
 
-Version 1.1.6
- 
+Version 1.1.7
+
 https://www.nexusmods.com/skyrimspecialedition/mods/74484
 
 WHAT CHANGED
 ------------
+
+Version 1.1.7
+Fixed location markers disappearing from the compass while many quests are active (1.1.6 let quest markers take all 48 compass slots). The quest marker limit now defaults to 32, which always leaves room for location markers; uQuestMarkerLimit in the INI still goes up to 48.
 
 Version 1.1.6
 Fixed quest markers losing their hover details and quest list when Quest Marker Limit Fix is installed.
