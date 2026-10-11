@@ -13,8 +13,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	
 	skse = a_skse;
 
-	std::this_thread::sleep_for(6s);
-
 	const SKSE::PluginDeclaration* plugin = SKSE::PluginDeclaration::GetSingleton();
 
 	if (!logger::init(plugin->GetName()))
