@@ -98,6 +98,39 @@ public:
 		Invoke("RemoveQuest");
 	}
 
+	// 1.1.7: moves the list to the current Position X/Y and Max height while the game runs (blckknight119, Nexus,
+	// 2026-10-11: "the quest menu can be moved in-game with live updates"). Before this the three values reached the
+	// movie only once, through the AS constructor below, so changing them on the settings page did nothing until the
+	// next start.
+	//
+	// It runs the movie's OWN constructor again rather than a function of ours, because the QuestItemList.swf the game
+	// loads is not always ours: Norden UI ships its own (restyled art, the same script), and with it installed ours is
+	// overridden. Both constructors do the same thing - place the list at Stage size * position through
+	// globalToLocal, and store positionY0 and maxHeight, which Update() clips the list against - so whichever SWF won,
+	// the list lands exactly where a fresh start with these values would put it. Three things make a second call safe:
+	//  - _x/_y are put back to where the clip was before the first call, because the constructor converts the target
+	//    with the clip's own globalToLocal, which counts its current position;
+	//  - the constructor starts a new, empty `entries` array, so the array holding the quests on screen is saved and
+	//    put back - otherwise those quests would be orphaned on the HUD;
+	//  - the HUD-mode flags it sets (All, Favor, StealthMode ...) are constants, the same values every time.
+	// Main thread only: Scaleform is not thread-safe, and the settings page draws from the renderer's present hook.
+	void ApplyPosition()
+	{
+		RE::GFxValue savedEntries = GetMember("entries");
+
+		SetMember("_x", initialX);
+		SetMember("_y", initialY);
+
+		Invoke("QuestItemList", settings::questlist::positionX, settings::questlist::positionY, settings::questlist::maxHeight);
+
+		if (savedEntries.IsArray())
+		{
+			SetMember("entries", savedEntries);
+		}
+
+		Update();
+	}
+
 	void ShowAllQuests()
 	{
 		Invoke("ShowAllQuests");
@@ -113,8 +146,18 @@ private:
 	QuestItemList(const GFxDisplayObject& a_questItemList) :
 		GFxDisplayObject{ a_questItemList }
 	{
+		// Where the clip sits before the constructor places it - ApplyPosition() starts from here every time.
+		const RE::GFxValue x = GetMember("_x");
+		const RE::GFxValue y = GetMember("_y");
+
+		initialX = x.IsNumber() ? x.GetNumber() : 0.0;
+		initialY = y.IsNumber() ? y.GetNumber() : 0.0;
+
 		Invoke("QuestItemList", settings::questlist::positionX, settings::questlist::positionY, settings::questlist::maxHeight);
 	}
+
+	double initialX = 0.0;
+	double initialY = 0.0;
 
 	static inline QuestItemList* singleton = nullptr;
 

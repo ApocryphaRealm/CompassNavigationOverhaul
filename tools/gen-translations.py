@@ -254,6 +254,18 @@ TRANSLATIONS = {
         "german": "Maximale Höhe", "french": "Hauteur maximale", "spanish": "Altura máxima",
         "italian": "Altezza massima", "polish": "Maksymalna wysokość", "czech": "Maximální výška",
     },
+    "CNO_HelpQuestListPosition": {
+        "japanese": "変更するとクエストリストが画面上ですぐに移動します。次回のプレイでもこの位置を使うには「保存」を押してください。",
+        "korean": "값을 바꾸면 퀘스트 목록이 화면에서 바로 이동합니다. 다음 플레이에도 위치를 유지하려면 저장을 누르세요.",
+        "chinese": "更改时任务列表会立即在屏幕上移动。按“保存”可在下次游戏时保留此位置。",
+        "russian": "Список заданий перемещается на экране сразу при изменении. Нажмите «Сохранить», чтобы сохранить положение для следующей игры.",
+        "german": "Verschiebt die Questliste sofort auf dem Bildschirm, während du den Wert änderst. Drücke Speichern, um die Position für das nächste Spiel zu behalten.",
+        "french": "Déplace la liste de quêtes à l'écran dès que vous changez la valeur. Appuyez sur Enregistrer pour garder la position la prochaine fois que vous jouez.",
+        "spanish": "Mueve la lista de misiones en pantalla mientras cambias el valor. Pulsa Guardar para conservar la posición la próxima vez que juegues.",
+        "italian": "Sposta l'elenco missioni sullo schermo mentre cambi il valore. Premi Salva per mantenere la posizione la prossima volta che giochi.",
+        "polish": "Przesuwa listę zadań na ekranie od razu podczas zmiany. Naciśnij Zapisz, aby zachować położenie na następną grę.",
+        "czech": "Při změně ihned posune seznam úkolů na obrazovce. Stiskněte Uložit, aby se poloha zachovala i při příštím hraní.",
+    },
     "CNO_ShowInExteriors": {
         "japanese": "屋外で表示", "korean": "실외에서 표시", "chinese": "在室外显示", "russian": "Показывать снаружи",
         "german": "Im Freien anzeigen", "french": "Afficher en extérieur", "spanish": "Mostrar en exteriores",

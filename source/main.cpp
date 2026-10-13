@@ -13,7 +13,11 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	
 	skse = a_skse;
 
-	std::this_thread::sleep_for(6s);
+	// 1.1.7: the unconditional std::this_thread::sleep_for(6s) that stood here is gone (Illustar0, Nexus, 2026-10-10:
+	// "It doesn't seem to serve any purpose"). It came in with upstream's 2.2.0 update, most likely a wait for a debugger
+	// to attach, and held every game start for 6 seconds. Nothing below waits on time: SKSE loads plugins one at a time on
+	// this thread, the game code it patches is already unpacked, and the HUD work starts from SKSE and Infinity UI
+	// messages sent later.
 
 	const SKSE::PluginDeclaration* plugin = SKSE::PluginDeclaration::GetSingleton();
 

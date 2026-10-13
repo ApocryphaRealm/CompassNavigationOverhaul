@@ -3,6 +3,9 @@
 #include "SKSEMenuFramework.h"
 
 #include "Compass.h"
+#include "Diagnostics.h"
+#include "PreciseSlider.h"
+#include "QuestItemList.h"
 #include "Settings.h"
 
 #include "utils/Logger.h"
@@ -10,6 +13,7 @@
 #include "utils/Toggle.h"
 
 #include <algorithm>
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -56,6 +60,9 @@ namespace UI
 				"igCheckbox",
 				"igCombo_Str_arr",
 				"igSliderFloat",
+				// precise::SliderFloat (include/PreciseSlider.h, rule 68) asks these to tell a nudge from a drag.
+				"igIsKeyDown_Nil",
+				"igIsMouseDown_Nil",
 				// Needed by NudgeableSlider's arrow-key nudge (ported from Dragon's Eye
 				// Minimap's UI.cpp - CLAUDE.md rule 24).
 				"igIsKeyPressed_Bool",
@@ -95,12 +102,14 @@ namespace UI
 		// A slider that the arrow keys can also nudge, once it has been clicked. Dragging is
 		// hopeless for the last decimal place, and the framework does not turn on ImGui's own
 		// keyboard navigation, so this tracks the selection itself rather than changing a
-		// setting shared with every other mod's page. Ported verbatim from Dragon's Eye
-		// Minimap's UI.cpp, which already had this working - see CLAUDE.md rule 24.
-		bool NudgeableSlider(const char* a_label, float* a_value, float a_min, float a_max,
-							 const char* a_format, float a_step)
+		// setting shared with every other mod's page. Ported from Dragon's Eye Minimap's UI.cpp,
+		// which already had this working - see CLAUDE.md rule 24.
+		// 1.1.7 (rule 68): drawn through precise::SliderFloat, and the arrow-key nudge moves one unit of the digit the
+		// format shows ("%.3f" -> 0.001) instead of a fixed step. A frame where the slider itself already moved the
+		// value (ImGui's own keyboard navigation, which a framework with it switched on drives) adds no second nudge.
+		bool NudgeableSlider(const char* a_label, float* a_value, float a_min, float a_max, const char* a_format)
 		{
-			bool changed = ImGuiMCP::SliderFloat(a_label, a_value, a_min, a_max, a_format);
+			bool changed = precise::SliderFloat(a_label, a_value, a_min, a_max, a_format);
 
 			if (ImGuiMCP::IsItemClicked() || ImGuiMCP::IsItemActive())
 			{
@@ -109,18 +118,19 @@ namespace UI
 
 			if (selectedSlider == a_label)
 			{
+				const float step = static_cast<float>(precise::Step(a_format));
 				float nudge = 0.0F;
 
 				if (ImGuiMCP::IsKeyPressed(ImGuiMCP::ImGuiKey_LeftArrow) || ImGuiMCP::IsKeyPressed(ImGuiMCP::ImGuiKey_DownArrow))
 				{
-					nudge -= a_step;
+					nudge -= step;
 				}
 				if (ImGuiMCP::IsKeyPressed(ImGuiMCP::ImGuiKey_RightArrow) || ImGuiMCP::IsKeyPressed(ImGuiMCP::ImGuiKey_UpArrow))
 				{
-					nudge += a_step;
+					nudge += step;
 				}
 
-				if (nudge != 0.0F)
+				if (nudge != 0.0F && !changed)
 				{
 					*a_value = std::clamp(*a_value + nudge, a_min, a_max);
 					changed = true;
@@ -154,6 +164,36 @@ namespace UI
 			});
 		}
 
+		// Set while a move is queued for the main thread, so a slider dragged across many frames queues one task at a
+		// time rather than one per frame; the task reads the values when it runs, so the last one always lands.
+		std::atomic<bool> questListMoveQueued{ false };
+
+		// 1.1.7: Position X/Y and Max height move the quest list as they change (blckknight119's live-move request);
+		// before this they reached the movie only once, at start-up.
+		void ApplyQuestListPosition()
+		{
+			if (questListMoveQueued.exchange(true))
+			{
+				return;
+			}
+
+			OnMainThread([]() {
+				questListMoveQueued = false;
+
+				if (auto* questItemList = QuestItemList::GetSingleton())
+				{
+					questItemList->ApplyPosition();
+
+					const RE::GPointF screen = questItemList->LocalToGlobal();
+					diagnostics::RecordQuestListMoved(screen.x, screen.y);
+
+					logger::debug("Quest list moved to X {:.3f}, Y {:.3f}, max height {:.3f} (screen {:.1f}, {:.1f})",
+						settings::questlist::positionX, settings::questlist::positionY, settings::questlist::maxHeight,
+						screen.x, screen.y);
+				}
+			});
+		}
+
 		void RenderDisplaySection()
 		{
 			using namespace settings::display;
@@ -179,11 +219,11 @@ namespace UI
 			ImGuiMCP::Toggle(strings::TR("CNO_ShowObjectiveAsTarget", "Show objective as target"), &showObjectiveAsTarget);
 			ImGuiMCP::Toggle(strings::TR("CNO_ShowOtherObjectivesCount", "Show other objectives count"), &showOtherObjectivesCount);
 
-			NudgeableSlider(strings::TR("CNO_AngleToShowMarkerDetails", "Angle to show marker details"), &angleToShowMarkerDetails, 0.0F, 90.0F, "%.0f", 1.0F);
+			NudgeableSlider(strings::TR("CNO_AngleToShowMarkerDetails", "Angle to show marker details"), &angleToShowMarkerDetails, 0.0F, 90.0F, "%.0f");
 			HelpMarker(strings::TR("CNO_HelpAngleToShowMarkerDetails", "How close to the center of the compass a marker has to be before its name and distance appear."));
-			NudgeableSlider(strings::TR("CNO_AngleToKeepMarkerDetailsShown", "Angle to keep marker details shown"), &angleToKeepMarkerDetailsShown, 0.0F, 90.0F, "%.0f", 1.0F);
+			NudgeableSlider(strings::TR("CNO_AngleToKeepMarkerDetailsShown", "Angle to keep marker details shown"), &angleToKeepMarkerDetailsShown, 0.0F, 90.0F, "%.0f");
 			HelpMarker(strings::TR("CNO_HelpAngleToKeepMarkerDetailsShown", "Once shown, a marker's details stay visible until it drifts past this wider angle - keeps the text from flickering right at the threshold."));
-			NudgeableSlider(strings::TR("CNO_FocusingDelayToShow", "Focusing delay to show"), &focusingDelayToShow, 0.0F, 2.0F, "%.2f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_FocusingDelayToShow", "Focusing delay to show"), &focusingDelayToShow, 0.0F, 2.0F, "%.2f");
 			HelpMarker(strings::TR("CNO_HelpFocusingDelayToShow", "How long a marker has to stay within the angle above before its details appear."));
 		}
 
@@ -193,18 +233,25 @@ namespace UI
 
 			ImGuiMCP::SeparatorText(strings::TR("CNO_QuestListTitle", "Quest list"));
 
-			NudgeableSlider(strings::TR("CNO_PositionX", "Position X"), &positionX, 0.0F, 1.0F, "%.3f", 0.01F);
-			NudgeableSlider(strings::TR("CNO_PositionY", "Position Y"), &positionY, 0.0F, 1.0F, "%.3f", 0.01F);
-			NudgeableSlider(strings::TR("CNO_MaxHeight", "Max height"), &maxHeight, 0.0F, 1.0F, "%.2f", 0.01F);
+			bool moved = false;
+			moved |= NudgeableSlider(strings::TR("CNO_PositionX", "Position X"), &positionX, 0.0F, 1.0F, "%.3f");
+			moved |= NudgeableSlider(strings::TR("CNO_PositionY", "Position Y"), &positionY, 0.0F, 1.0F, "%.3f");
+			moved |= NudgeableSlider(strings::TR("CNO_MaxHeight", "Max height"), &maxHeight, 0.0F, 1.0F, "%.2f");
+			HelpMarker(strings::TR("CNO_HelpQuestListPosition", "Moves the quest list on screen as you change it. Press Save to keep the position for the next time you play."));
+
+			if (moved)
+			{
+				ApplyQuestListPosition();
+			}
 
 			ImGuiMCP::Toggle(strings::TR("CNO_ShowInExteriors", "Show in exteriors"), &showInExteriors);
 			ImGuiMCP::Toggle(strings::TR("CNO_ShowInInteriors", "Show in interiors"), &showInInteriors);
 			ImGuiMCP::Toggle(strings::TR("CNO_HideInCombat", "Hide in combat"), &hideInCombat);
 			HelpMarker(strings::TR("CNO_HelpHideInCombat", "Hides the quest list entirely while a weapon or spell is drawn."));
 
-			NudgeableSlider(strings::TR("CNO_WalkingDelayToShow", "Walking delay to show"), &walkingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
-			NudgeableSlider(strings::TR("CNO_JoggingDelayToShow", "Jogging delay to show"), &joggingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
-			NudgeableSlider(strings::TR("CNO_SprintingDelayToShow", "Sprinting delay to show"), &sprintingDelayToShow, 0.0F, 3.0F, "%.2f", 0.01F);
+			NudgeableSlider(strings::TR("CNO_WalkingDelayToShow", "Walking delay to show"), &walkingDelayToShow, 0.0F, 3.0F, "%.2f");
+			NudgeableSlider(strings::TR("CNO_JoggingDelayToShow", "Jogging delay to show"), &joggingDelayToShow, 0.0F, 3.0F, "%.2f");
+			NudgeableSlider(strings::TR("CNO_SprintingDelayToShow", "Sprinting delay to show"), &sprintingDelayToShow, 0.0F, 3.0F, "%.2f");
 			HelpMarker(strings::TR("CNO_HelpPaceDelays", "How long you have to move at each pace before the quest list fades in."));
 		}
 
@@ -317,6 +364,7 @@ namespace UI
 		logger::set_level(settings::debug::logLevel, settings::debug::logLevel);
 
 		ApplyUseMetricUnits();
+		ApplyQuestListPosition();
 	}
 
 	void __stdcall SettingsPanel::Render()

@@ -81,6 +81,12 @@ namespace diagnostics
 			std::uint64_t hudPatchesFinished = 0;
 			bool compassInstanceReady = false;
 			bool questItemListReady = false;
+
+			// 1.1.7: live quest list moves from the settings page, and where the last one put the list on screen
+			std::uint64_t questListMoves = 0;
+			float questListMoveX = 0.0F;
+			float questListMoveY = 0.0F;
+			std::optional<clock::time_point> lastQuestListMove;
 			std::optional<clock::time_point> lastHudPatch;
 
 			// Per-frame marker bookkeeping
@@ -369,6 +375,9 @@ namespace diagnostics
 				"\"hudPatchesFinished\":{},"
 				"\"compassInstanceReady\":{},"
 				"\"questItemListReady\":{},"
+				"\"questListMoves\":{},"
+				"\"questListMoveScreen\":{{\"x\":{:.1f},\"y\":{:.1f}}},"
+				"{},"
 				"{}"
 				"}}",
 				Bool(state.infinityUiListenerAttempted),
@@ -377,6 +386,10 @@ namespace diagnostics
 				state.hudPatchesFinished,
 				Bool(state.compassInstanceReady),
 				Bool(state.questItemListReady),
+				state.questListMoves,
+				state.questListMoveX,
+				state.questListMoveY,
+				SecondsAgoField("lastQuestListMove", state.lastQuestListMove),
 				SecondsAgoField("lastHudPatch", state.lastHudPatch));
 		}
 
@@ -697,6 +710,16 @@ namespace diagnostics
 
 		state.questItemListReady = a_ready;
 		state.lastHudPatch = clock::now();
+	}
+
+	void RecordQuestListMoved(float a_screenX, float a_screenY)
+	{
+		std::scoped_lock lock(mtx);
+
+		++state.questListMoves;
+		state.questListMoveX = a_screenX;
+		state.questListMoveY = a_screenY;
+		state.lastQuestListMove = clock::now();
 	}
 
 	void RecordQuestMarkerOffer(bool a_added) { (a_added ? g_questAdded : g_questDeclined).fetch_add(1, std::memory_order_relaxed); }

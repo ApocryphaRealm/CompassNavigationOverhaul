@@ -30,8 +30,21 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 ### Fixed
 - Location markers no longer vanish while many quests are active (makihaze on Nexus, 2026-10-08: 'limit in 16, The map markers appear again'). The compass's 48 slots are shared and quests are added first; 1.1.6's default quest cap of 48 let quest markers take every slot. uQuestMarkerLimit now defaults to 32, which always leaves 16 for location, enemy and player-set markers (the INI still allows 16-48).
 
+- **The game starts 6 seconds sooner.** `SKSEPluginLoad` slept for 6 seconds, unconditionally, before doing anything (`std::this_thread::sleep_for(6s)`, in from upstream's 2.2.0 update - most likely a wait for a debugger to attach, left in a release build). It is removed. Nothing after it depended on time: SKSE loads plugins one at a time on that thread, the game code patched at load is already unpacked, and the HUD work starts from SKSE and Infinity UI messages sent later. (Added 2026-10-13.)
+- **The quest list's Position X, Position Y and Max height now move the list while you change them** on the settings page, instead of only after the next start (they reached the HUD movie once, through its constructor, and never again). The move runs the loaded QuestItemList movie's own constructor again - with the clip put back where it started and its list of on-screen quests kept - so it works the same whichever QuestItemList.swf wins: ours, or Norden UI's restyled one with the same script, and lands exactly where a fresh start with those values would. Press Save to keep the position. (Added 2026-10-13.)
+- **Which INI copy is used, with Norden UI:** Norden UI ships its own tuned `CompassNavigationOverhaul.ini` (fPositionX 0.775 against our 0.008), which wins the load order in Mod Organizer 2. The plugin reads and saves the INI through the same game-folder path, which the virtual file system resolves to that winning copy both ways, so a saved position is the one read at the next start. The log now names the quest list position read at start, so a log shows which copy it came from. (Added 2026-10-13.)
+
+### Changed
+- Every slider on the settings page is a precise slider (rule 68): a keyboard or controller nudge moves one unit of the digit it shows (Position X/Y 0.001, delays 0.01, angles 1) - the arrow-key nudge had moved 0.01 on the three-decimal position sliders. A frame where the slider already moved the value adds no second nudge. (Added 2026-10-13.)
+- The settings page has a (?) note under the quest list position sliders, in all eleven languages: the list moves as you change them, and Save keeps the position. (Added 2026-10-13.)
+
 ### Added
 - DevBench status: markers.lastFrame counts the last frame's quest and location AddMarker offers, accepted and declined, and framesWithLocationsDeclined - so a test shows directly whether quest markers are still crowding out locations. The second half of makihaze's report (the tracked quest's far destination not shown) is NOT addressed yet: it needs the caller of UpdateQuests mapped first; these counters are for that.
+- DevBench status: infinityUi.questListMoves counts live quest list moves, with questListMoveScreen (where the list's origin landed on screen after the last one) and lastQuestListMoveSecondsAgo. (Added 2026-10-13.)
+
+### Credit
+- Illustar0 (Nexus, 2026-10-10) found the 6-second start-up sleep and asked why it was there.
+- blckknight119 (Nexus, 2026-10-11) suggested moving the quest list in game with live updates.
 
 ## 1.1.6 - 2026-09-26 - working
 

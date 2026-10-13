@@ -7,8 +7,9 @@ namespace UI
 	void Register();
 
 	// Pushes the current value of settings::display::useMetricUnits into the running compass,
-	// and the log level into spdlog. Everything else under settings::display and
-	// settings::questlist is read live wherever it's used, so it needs nothing doing here.
+	// the quest list position (Position X/Y, Max height) into the running quest list, and the
+	// log level into spdlog. Everything else under settings::display and settings::questlist is
+	// read live wherever it's used, so it needs nothing doing here.
 	void ApplyLiveSettings();
 
 	namespace SettingsPanel

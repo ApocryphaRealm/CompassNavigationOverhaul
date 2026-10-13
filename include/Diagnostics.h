@@ -117,6 +117,10 @@ namespace diagnostics
 	void RecordCompassInstanceReady(bool a_ready);
 	void RecordQuestItemListReady(bool a_ready);
 
+	// 1.1.7: the settings page moved the quest list live; a_screenX/Y is where its origin landed on screen
+	// (localToGlobal of the clip after the move), so a test can read the move without a picture.
+	void RecordQuestListMoved(float a_screenX, float a_screenY);
+
 	// ---------------------------------------------------------------------------------------
 	// Per-frame marker bookkeeping
 	// ---------------------------------------------------------------------------------------

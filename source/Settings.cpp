@@ -646,6 +646,13 @@ namespace settings
 
 		LoadFileValues(iniPath);
 		ReadFromCollection();
+
+		// 1.1.7: names the quest list position actually read. Under Mod Organizer 2 this path is virtual and resolves to
+		// the copy of the INI that wins the load order - with Norden UI installed that is Norden's own tuned copy
+		// (fPositionX 0.775), not ours (0.008) - and a Save writes back through the same path, so the copy read is the
+		// copy saved. The line lets a log show which copy that was.
+		logger::info("Quest list from {}: position X {:g}, Y {:g}, max height {:g}", iniPath, questlist::positionX,
+			questlist::positionY, questlist::maxHeight);
 	}
 
 	bool Reload()
