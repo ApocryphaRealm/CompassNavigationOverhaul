@@ -9,6 +9,7 @@ WHAT CHANGED
 
 Version 1.1.7
 Fixed location markers disappearing from the compass while many quests are active (1.1.6 let quest markers take all 48 compass slots). The quest marker limit now defaults to 32, which always leaves room for location markers; uQuestMarkerLimit in the INI still goes up to 48.
+Added an installer choice for the compass art. Mods that recolour CNO's compass icons ship their own copy of its compass movie (Interface\InfinityUI\HUDMenu\HUDMovieBaseInstance\CompassShoutMeterHolder\Compass.swf) - Vibrant Map Markers and its Dear Diary Dark Mode, Untarnished UI and Dragonbreaker UI compass files, for example. Installed in place of the original CNO, this mod landed below them in Mod Organizer 2 and its uncoloured copy won, so the location icons drawn by that movie lost their colour while CoMAP's own icons kept theirs. If you use such a mod, pick "Use the compass from another mod" in the installer, or let that mod overwrite this one. Without such a mod, keep the default.
 
 Version 1.1.6
 Fixed quest markers losing their hover details and quest list when Quest Marker Limit Fix is installed.
