@@ -205,7 +205,8 @@ namespace CNO
 		if ((IsTheFocusedMarker(a_enemy) && angleToPlayerCamera < keepFocusedAngle) ||
 			angleToPlayerCamera < facingAngle)
 		{
-			std::string enemyName = NND::NPCNameProvider::GetSingleton()->GetName(a_enemy);
+			std::string enemyName = settings::display::showEnemyNameUnderMarker ?
+										NND::NPCNameProvider::GetSingleton()->GetName(a_enemy) : "";
 
 			facedMarkers.emplace_back(a_enemy, angleToPlayerCamera,
 									hudMarkerManager->currentMarkerIndex - 1,
@@ -293,35 +294,34 @@ namespace CNO
 		{
 			std::string focusedMarkerDescription = focusedMarker->description;
 
-			if (settings::display::showObjectiveAsTarget && settings::display::showOtherObjectivesCount)
+			int objectivesCount = 0;
+
+			if (questItems.contains(focusedMarker->ref))
 			{
-				int objectivesCount = 0;
+				isFocusedQuestMarker = true;
 
-				if (questItems.contains(focusedMarker->ref))
+				std::unordered_map<RE::TESQuest*, QuestItem>& questItemMap = questItems[focusedMarker->ref];
+
+				for (auto& [quest, questItem] : questItemMap)
 				{
-					isFocusedQuestMarker = true;
-
-					std::unordered_map<RE::TESQuest*, QuestItem>& questItemMap = questItems[focusedMarker->ref];
-
-					for (auto& [quest, questItem] : questItemMap)
-					{
-						objectivesCount += questItem.objectives.size();
-					}
-				}
-
-				if (miscQuestItem.contains(focusedMarker->ref))
-				{
-					isFocusedQuestMarker = true;
-
-					QuestItem& questItem = miscQuestItem[focusedMarker->ref];
-
 					objectivesCount += questItem.objectives.size();
 				}
+			}
 
-				if (objectivesCount > 1)
-				{
-					focusedMarkerDescription += " (+" + std::to_string(objectivesCount - 1) + ")";
-				}
+			if (miscQuestItem.contains(focusedMarker->ref))
+			{
+				isFocusedQuestMarker = true;
+
+				QuestItem& questItem = miscQuestItem[focusedMarker->ref];
+
+				objectivesCount += questItem.objectives.size();
+			}
+
+			// Only the "(+N)" suffix depends on these settings; whether the focused marker is a quest marker (and so
+			// whether the quest list shows) does not, as in the 2.2.0 release.
+			if (settings::display::showObjectiveAsTarget && settings::display::showOtherObjectivesCount && objectivesCount > 1)
+			{
+				focusedMarkerDescription += " (+" + std::to_string(objectivesCount - 1) + ")";
 			}
 
 			compass->SetFocusedMarkerInfo(focusedMarkerDescription, focusedMarker->distanceToPlayer,
@@ -339,14 +339,21 @@ namespace CNO
 
 		bool canQuestItemListBeDisplayed = questItemList->CanBeDisplayed(player->GetParentCell(), playerState->IsWeaponDrawn());
 
-		if (!canQuestItemListBeDisplayed || focusChanged)
+		if (!canQuestItemListBeDisplayed)
+		{
+			questItemList->SetHiddenByForce(true);
+		}
+
+		if (focusChanged || questItemList->IsHiddenByForce())
 		{
 			questItemList->RemoveAllQuests();
 		}
 
 		if (canQuestItemListBeDisplayed && isFocusedQuestMarker)
 		{
-			if (focusChanged)
+			// Also refill after a forced hide (weapon drawn, interior/exterior setting), so the list comes back when it
+			// may be shown again without having to look away from the marker first, as in the 2.2.0 release.
+			if (focusChanged || questItemList->IsHiddenByForce())
 			{
 				if (questItems.contains(focusedMarker->ref))
 				{
