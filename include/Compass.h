@@ -67,9 +67,13 @@ namespace CNO
 										   a_markerIndex);
 		}
 
-		void FocusMarker()
+		// The shipped Compass.swf (upstream 2.2.0) reads the marker index from FocusMarker's and
+		// UpdateFocusedMarker's argument; the newer source ignores it (AS2 drops extra arguments), so
+		// passing it is right for either movie. Without it the focused marker's name and distance stay
+		// at the compass centre while the icon sits aside.
+		void FocusMarker(std::uint32_t a_focusedMarkerIndex)
 		{
-			Invoke("FocusMarker");
+			Invoke("FocusMarker", a_focusedMarkerIndex);
 		}
 
 		void UnfocusMarker()
@@ -77,9 +81,9 @@ namespace CNO
 			Invoke("UnfocusMarker");
 		}
 
-		void UpdateFocusedMarker()
+		void UpdateFocusedMarker(std::uint32_t a_focusedMarkerIndex)
 		{
-			Invoke("UpdateFocusedMarker");
+			Invoke("UpdateFocusedMarker", a_focusedMarkerIndex);
 		}
 
 		void PostProcessMarkers(const std::unordered_map<std::uint32_t, bool>& a_unknownLocations, std::uint32_t a_markersCount)

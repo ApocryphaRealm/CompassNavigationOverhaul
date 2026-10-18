@@ -329,10 +329,10 @@ namespace CNO
 
 			if (focusChanged)
 			{
-				compass->FocusMarker();
+				compass->FocusMarker(focusedMarker->index);
 			}
 
-			compass->UpdateFocusedMarker();
+			compass->UpdateFocusedMarker(focusedMarker->index);
 		}
 
 		RE::ActorState* playerState = player->AsActorState();
