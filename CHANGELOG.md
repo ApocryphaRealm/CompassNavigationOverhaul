@@ -25,7 +25,7 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
-## 1.1.7 - 2026-10-08 - untested
+## 1.1.7 - 2026-10-08 - working
 
 ### Fixed
 - The focused marker's name and distance label now follows its marker. The plugin called the compass movie's FocusMarker and UpdateFocusedMarker without the marker index the shipped Compass.swf (upstream 2.2.0) reads from those calls, so the movie had no marker to follow and the label stayed at the compass centre while the icon sat 30 to 50 pixels aside; the index is passed again, as upstream 2.2.0 did (the newer movie source ignores the extra argument, so either movie works). Seen in game 2026-10-16. (Added 2026-10-18.)
