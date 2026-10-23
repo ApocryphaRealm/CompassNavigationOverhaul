@@ -25,7 +25,7 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
-## 1.2.0 - 2026-10-23 - untested
+## 1.2.0 - 2026-10-23 - working
 
 ### Added
 - **Text size** slider on the settings page (Compass and markers): scales the text the compass draws - the focused
