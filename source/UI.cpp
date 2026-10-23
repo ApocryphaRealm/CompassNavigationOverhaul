@@ -180,9 +180,15 @@ namespace UI
 
 				const float scale = settings::display::textScale;
 				auto* compass = CNO::Compass::GetSingleton();
-				const bool applied = compass && compass->SetTextScale(scale);
-				diagnostics::RecordTextScaleApplied(scale, applied);
-				logger::debug("Compass text size {:.2f} {}", scale, applied ? "applied" : "not applied (no compass movie yet)");
+				if (!compass)
+				{
+					logger::debug("Compass text size {:.2f} kept for when the compass movie is set up", scale);
+					return;
+				}
+				const char* clip = compass->SetTextScale(scale);
+				diagnostics::RecordTextScaleApplied(scale, clip);
+				logger::debug("Compass text size {:.2f} {} {}", scale, clip ? "applied to" : "not applied: no focused-marker clip in",
+					clip ? clip : "the compass movie");
 			});
 		}
 
@@ -253,6 +259,10 @@ namespace UI
 				ApplyTextScale();
 			}
 			HelpMarker(strings::TR("CNO_HelpTextScale", "Scales the text the compass draws - marker names, objectives and distances. 1.00 is the size it has always had."));
+			if (diagnostics::TextScaleUnavailable())
+			{
+				ImGuiMCP::TextDisabled("%s", strings::TR("CNO_TextScaleUnavailable", "Not available with the current compass movie (another UI mod replaces it)."));
+			}
 		}
 
 		void RenderQuestListSection()

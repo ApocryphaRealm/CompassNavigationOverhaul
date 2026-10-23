@@ -55,19 +55,25 @@ namespace CNO
 			Invoke("SetUnits", a_useMetric);
 		}
 
-		// The text the compass draws lives in one clip, FocusedMarkerInfo (Compass.as): the marker's name or objective
-		// (Target) and its distance with the height arrow (Distance). Scaling that clip scales all of it about its own
-		// origin, which the movie keeps on the focused marker, so the text stays centred under it. Returns false when
-		// the clip is not there (another compass movie won the load order).
-		bool SetTextScale(float a_scale)
+		// The text the compass draws lives in one clip: the marker's name or objective (Target) and its distance with the
+		// height arrow (Distance). Scaling that clip scales all of it about its own origin, which the movie keeps on the
+		// focused marker, so the text stays centred under it. The shipped movies (ours and Norden UI's, read from the
+		// SWFs 2026-10-23) name it FocusedMarkerInstance; swf\Compass.as names it FocusedMarkerInfo - both are tried,
+		// the shipped name first. Returns the name of the clip it scaled, or nullptr when the compass movie in the
+		// load order has neither.
+		const char* SetTextScale(float a_scale)
 		{
-			RE::GFxValue info = GetMember("FocusedMarkerInfo");
-			if (!info.IsDisplayObject())
-			{
-				return false;
-			}
+			constexpr const char* kClips[] = { "FocusedMarkerInstance", "FocusedMarkerInfo" };
 			const RE::GFxValue percent{ static_cast<double>(a_scale) * 100.0 };
-			return info.SetMember("_xscale", percent) && info.SetMember("_yscale", percent);
+			for (const char* name : kClips)
+			{
+				RE::GFxValue clip = GetMember(name);
+				if (clip.IsDisplayObject() && clip.SetMember("_xscale", percent) && clip.SetMember("_yscale", percent))
+				{
+					return name;
+				}
+			}
+			return nullptr;
 		}
 
 		void SetMarkers()

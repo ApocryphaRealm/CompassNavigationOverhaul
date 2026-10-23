@@ -93,6 +93,7 @@ namespace diagnostics
 			std::uint64_t textScaleApplies = 0;
 			float textScaleApplied = 0.0F;
 			bool textScaleOk = false;
+			std::string textScaleClip;
 			std::optional<clock::time_point> lastTextScale;
 			std::optional<clock::time_point> lastHudPatch;
 
@@ -460,8 +461,9 @@ namespace diagnostics
 		std::string BuildTextScaleJson()
 		{
 			return std::format(
-				"\"textScale\":{{\"setting\":{:.2f},\"applied\":{:.2f},\"ok\":{},\"applies\":{},{}}}",
-				settings::display::textScale, state.textScaleApplied, Bool(state.textScaleOk), state.textScaleApplies,
+				"\"textScale\":{{\"setting\":{:.2f},\"applied\":{:.2f},\"ok\":{},\"clip\":\"{}\",\"applies\":{},{}}}",
+				settings::display::textScale, state.textScaleApplied, Bool(state.textScaleOk), EscapeJson(state.textScaleClip),
+				state.textScaleApplies,
 				SecondsAgoField("last", state.lastTextScale));
 		}
 
@@ -749,14 +751,22 @@ namespace diagnostics
 		state.lastHudPatch = clock::now();
 	}
 
-	void RecordTextScaleApplied(float a_scale, bool a_applied)
+	void RecordTextScaleApplied(float a_scale, const char* a_clip)
 	{
 		std::scoped_lock lock(mtx);
 
 		++state.textScaleApplies;
-		state.textScaleApplied = a_applied ? a_scale : 0.0F;
-		state.textScaleOk = a_applied;
+		state.textScaleApplied = a_clip ? a_scale : 0.0F;
+		state.textScaleOk = a_clip != nullptr;
+		state.textScaleClip = a_clip ? a_clip : "";
 		state.lastTextScale = clock::now();
+	}
+
+	bool TextScaleUnavailable()
+	{
+		std::scoped_lock lock(mtx);
+
+		return state.textScaleApplies > 0 && !state.textScaleOk;
 	}
 
 	void RecordQuestListMoved(float a_screenX, float a_screenY)

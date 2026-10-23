@@ -33,8 +33,13 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
   it has always had). It applies as the slider moves, is saved with Save (`fTextScale` in [Display]), is put back by
   Restore defaults, and the saved size is applied whenever the compass movie is set up. A player could not read the
   compass on a TV (the owner, 2026-10-23). In all eleven languages.
+- The text it scales is the movie's focused-marker clip, FocusedMarkerInstance in the shipped compass movies (CNO's
+  own and Norden UI's; swf\Compass.as still calls it FocusedMarkerInfo, which is tried second). The first test
+  build looked only for FocusedMarkerInfo and scaled nothing (combined run 2026-10-23).
+- When the compass movie in the load order has no such clip, the page says so under the slider: "Not available
+  with the current compass movie (another UI mod replaces it)."
 - DevBench `compassnavigationoverhaul.status`: a `textScale` block (the setting, what last reached the movie, and
-  whether it did), and `op=textscale value=<0.75..2.00>`, which does what the slider does.
+  whether it did, and the clip it scaled), and `op=textscale value=<0.75..2.00>`, which does what the slider does.
 
 ### Fixed
 - **A missing or wrong Address Library now gets the Address Library guard's message, not CommonLibSSE-NG's bare box.**

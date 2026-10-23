@@ -121,8 +121,13 @@ namespace diagnostics
 	// (localToGlobal of the clip after the move), so a test can read the move without a picture.
 	void RecordQuestListMoved(float a_screenX, float a_screenY);
 
-	// 1.2.0: the compass text size was written to the movie (a_applied) or could not be (no FocusedMarkerInfo clip).
-	void RecordTextScaleApplied(float a_scale, bool a_applied);
+	// 1.2.0: the compass text size was written to the clip a_clip, or could not be (a_clip null: the compass movie in
+	// the load order has no focused-marker clip).
+	void RecordTextScaleApplied(float a_scale, const char* a_clip);
+
+	// 1.2.0: true once an apply has run and found no clip to scale - the settings page then says the slider has no
+	// effect with this compass movie.
+	bool TextScaleUnavailable();
 
 	// ---------------------------------------------------------------------------------------
 	// Per-frame marker bookkeeping

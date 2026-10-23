@@ -234,10 +234,17 @@ void InfinityUIMessageListener(SKSE::MessagingInterface::Message* a_msg)
 
 						compass->SetupMod(postPatchMessage->newInstance);
 						compass->SetUnits(settings::display::useMetricUnits);
-						const bool textScaled = compass->SetTextScale(settings::display::textScale);
-						diagnostics::RecordTextScaleApplied(settings::display::textScale, textScaled);
-						logger::info("Compass text size {:.2f} {}", settings::display::textScale,
-							textScaled ? "applied" : "not applied: the compass movie has no FocusedMarkerInfo clip");
+						const char* textClip = compass->SetTextScale(settings::display::textScale);
+						diagnostics::RecordTextScaleApplied(settings::display::textScale, textClip);
+						if (textClip)
+						{
+							logger::info("Compass text size {:.2f} applied to {}", settings::display::textScale, textClip);
+						}
+						else
+						{
+							logger::warn("Compass text size {:.2f} not applied: the compass movie in the load order has no "
+								"FocusedMarkerInstance or FocusedMarkerInfo clip", settings::display::textScale);
+						}
 							
 						logger::debug("After replacing:");
 						memberLogger.LogMembersOf(*compass);
