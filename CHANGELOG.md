@@ -38,6 +38,9 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
   build looked only for FocusedMarkerInfo and scaled nothing (combined run 2026-10-23).
 - When the compass movie in the load order has no such clip, the page says so under the slider: "Not available
   with the current compass movie (another UI mod replaces it)."
+- The larger text stays on screen: the name sits under the compass, so scaling about the clip's centre pushed it
+  off the bottom of the screen at 2.00 (combined run 2026-10-23). The clip now moves up as it grows so the name's
+  top edge stays where it is at 1.00, and lifts further by anything that would still fall below the visible frame.
 - DevBench `compassnavigationoverhaul.status`: a `textScale` block (the setting, what last reached the movie, and
   whether it did, and the clip it scaled), and `op=textscale value=<0.75..2.00>`, which does what the slider does.
 
