@@ -2,6 +2,7 @@
 
 #include "DevBench/DevBenchAPI.h"
 #include "Settings.h"
+#include "UI.h"
 #include "utils/Logger.h"
 #include "utils/Strings.h"
 
@@ -87,6 +88,12 @@ namespace diagnostics
 			float questListMoveX = 0.0F;
 			float questListMoveY = 0.0F;
 			std::optional<clock::time_point> lastQuestListMove;
+
+			// 1.2.0: the compass text size as last written to the movie
+			std::uint64_t textScaleApplies = 0;
+			float textScaleApplied = 0.0F;
+			bool textScaleOk = false;
+			std::optional<clock::time_point> lastTextScale;
 			std::optional<clock::time_point> lastHudPatch;
 
 			// Per-frame marker bookkeeping
@@ -449,6 +456,15 @@ namespace diagnostics
 				SecondsAgoField("lastFocusChange", state.lastFocusChange));
 		}
 
+		// Caller holds mtx.
+		std::string BuildTextScaleJson()
+		{
+			return std::format(
+				"\"textScale\":{{\"setting\":{:.2f},\"applied\":{:.2f},\"ok\":{},\"applies\":{},{}}}",
+				settings::display::textScale, state.textScaleApplied, Bool(state.textScaleOk), state.textScaleApplies,
+				SecondsAgoField("last", state.lastTextScale));
+		}
+
 		// Reads "op" out of the args JSON without pulling in a parser: the strings are this
 		// tool's own, and a driving tool that needed a JSON library to answer one question
 		// would be worse than the question.
@@ -479,6 +495,24 @@ namespace diagnostics
 				return;
 			}
 
+			// op=textscale with value=0.75..2.00: what the Text size slider does, from outside the menu (rule 64). The
+			// apply runs on the main thread; read it back from textScale.applied in the next status.
+			if (ArgString(args, "op") == "textscale")
+			{
+				const std::string value = ArgString(args, "value");
+				float scale = 0.0F;
+				try { scale = std::stof(value); } catch (...) { scale = 0.0F; }
+				if (scale <= 0.0F)
+				{
+					a_write(a_sink, R"({"ok":false,"op":"textscale","error":"value must be a number, 0.75 to 2.00"})");
+					return;
+				}
+				UI::SetTextScale(scale);
+				const std::string reply = std::format(R"({{"ok":true,"op":"textscale","setting":{:.2f}}})", settings::display::textScale);
+				a_write(a_sink, reply.c_str());
+				return;
+			}
+
 			std::string json;
 
 			{
@@ -500,6 +534,8 @@ namespace diagnostics
 				json += BuildMarkersJson();
 				json += ',';
 				json += BuildCompassUpdateJson();
+				json += ',';
+				json += BuildTextScaleJson();
 				json += '}';
 			}
 
@@ -545,9 +581,10 @@ namespace diagnostics
 			"and why, the built-in quest marker cap, Quest Marker Limit Fix detection and "
 			"deferred quest-marker reconciliation counts, the Infinity UI HUD patch lifecycle, and per-frame marker/compass-update "
 			"counters. op=strings reports the active language, source and loaded translation "
-			"count.\","
-			"\"inputSchema\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"}}},"
-			"\"readOnly\":true"
+			"count. op=textscale value=0.75..2.00 sets the compass text size as the Text size slider does "
+			"(textScale.applied in the next status says it reached the movie).\","
+			"\"inputSchema\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"},\"value\":{\"type\":\"number\"}}},"
+			"\"readOnly\":false"
 			"}";
 
 		if (devBench->RegisterTool("compassnavigationoverhaul.status", descriptor, &StatusTool, nullptr))
@@ -710,6 +747,16 @@ namespace diagnostics
 
 		state.questItemListReady = a_ready;
 		state.lastHudPatch = clock::now();
+	}
+
+	void RecordTextScaleApplied(float a_scale, bool a_applied)
+	{
+		std::scoped_lock lock(mtx);
+
+		++state.textScaleApplies;
+		state.textScaleApplied = a_applied ? a_scale : 0.0F;
+		state.textScaleOk = a_applied;
+		state.lastTextScale = clock::now();
 	}
 
 	void RecordQuestListMoved(float a_screenX, float a_screenY)

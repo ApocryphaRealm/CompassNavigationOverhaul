@@ -12,6 +12,10 @@ namespace UI
 	// read live wherever it's used, so it needs nothing doing here.
 	void ApplyLiveSettings();
 
+	// 1.2.0: sets the compass text size (clamped to the slider's range) and applies it on the main thread, as the
+	// slider does - the DevBench op=textscale drives it.
+	void SetTextScale(float a_scale);
+
 	namespace SettingsPanel
 	{
 		void __stdcall Render();

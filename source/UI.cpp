@@ -164,6 +164,28 @@ namespace UI
 			});
 		}
 
+		// 1.2.0: the compass text's size, applied as the slider moves (the owner, 2026-10-23: a player could not read the
+		// compass on a TV). Queued like the quest list's move: one task at a time, which reads the value when it runs.
+		std::atomic<bool> textScaleQueued{ false };
+
+		void ApplyTextScale()
+		{
+			if (textScaleQueued.exchange(true))
+			{
+				return;
+			}
+
+			OnMainThread([]() {
+				textScaleQueued = false;
+
+				const float scale = settings::display::textScale;
+				auto* compass = CNO::Compass::GetSingleton();
+				const bool applied = compass && compass->SetTextScale(scale);
+				diagnostics::RecordTextScaleApplied(scale, applied);
+				logger::debug("Compass text size {:.2f} {}", scale, applied ? "applied" : "not applied (no compass movie yet)");
+			});
+		}
+
 		// Set while a move is queued for the main thread, so a slider dragged across many frames queues one task at a
 		// time rather than one per frame; the task reads the values when it runs, so the last one always lands.
 		std::atomic<bool> questListMoveQueued{ false };
@@ -225,6 +247,12 @@ namespace UI
 			HelpMarker(strings::TR("CNO_HelpAngleToKeepMarkerDetailsShown", "Once shown, a marker's details stay visible until it drifts past this wider angle - keeps the text from flickering right at the threshold."));
 			NudgeableSlider(strings::TR("CNO_FocusingDelayToShow", "Focusing delay to show"), &focusingDelayToShow, 0.0F, 2.0F, "%.2f");
 			HelpMarker(strings::TR("CNO_HelpFocusingDelayToShow", "How long a marker has to stay within the angle above before its details appear."));
+
+			if (NudgeableSlider(strings::TR("CNO_TextScale", "Text size"), &textScale, kTextScaleMin, kTextScaleMax, "%.2f"))
+			{
+				ApplyTextScale();
+			}
+			HelpMarker(strings::TR("CNO_HelpTextScale", "Scales the text the compass draws - marker names, objectives and distances. 1.00 is the size it has always had."));
 		}
 
 		void RenderQuestListSection()
@@ -364,7 +392,14 @@ namespace UI
 		logger::set_level(settings::debug::logLevel, settings::debug::logLevel);
 
 		ApplyUseMetricUnits();
+		ApplyTextScale();
 		ApplyQuestListPosition();
+	}
+
+	void SetTextScale(float a_scale)
+	{
+		settings::display::textScale = std::clamp(a_scale, settings::display::kTextScaleMin, settings::display::kTextScaleMax);
+		ApplyTextScale();
 	}
 
 	void __stdcall SettingsPanel::Render()

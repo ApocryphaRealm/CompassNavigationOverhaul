@@ -55,6 +55,21 @@ namespace CNO
 			Invoke("SetUnits", a_useMetric);
 		}
 
+		// The text the compass draws lives in one clip, FocusedMarkerInfo (Compass.as): the marker's name or objective
+		// (Target) and its distance with the height arrow (Distance). Scaling that clip scales all of it about its own
+		// origin, which the movie keeps on the focused marker, so the text stays centred under it. Returns false when
+		// the clip is not there (another compass movie won the load order).
+		bool SetTextScale(float a_scale)
+		{
+			RE::GFxValue info = GetMember("FocusedMarkerInfo");
+			if (!info.IsDisplayObject())
+			{
+				return false;
+			}
+			const RE::GFxValue percent{ static_cast<double>(a_scale) * 100.0 };
+			return info.SetMember("_xscale", percent) && info.SetMember("_yscale", percent);
+		}
+
 		void SetMarkers()
 		{
 			Invoke("SetMarkers");

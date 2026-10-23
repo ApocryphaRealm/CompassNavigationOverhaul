@@ -49,6 +49,12 @@ namespace settings
 		inline float angleToShowMarkerDetails = 10.0F;
 		inline float angleToKeepMarkerDetailsShown = 35.0F;
 		inline float focusingDelayToShow = 0.07F;
+		// 1.2.0: the size of the text the compass draws (the focused marker's name or objective, its distance and height
+		// arrow), as a multiple of the movie's own size. A player could not read it on a TV (the owner, 2026-10-23).
+		// Clamped to kTextScaleMin..kTextScaleMax when read.
+		inline float textScale = 1.0F;
+		constexpr float kTextScaleMin = 0.75F;
+		constexpr float kTextScaleMax = 2.0F;
 		// The quest marker cap the game enforces inside HUDMarkerManager::UpdateQuests (vanilla: 16). Read once at load
 		// by hooks::QuestMarkerLimit::Install() and written into the game's code, so a change needs a restart. Clamped
 		// to 16..48 when read: 16 is vanilla, 48 is all the marker array holds.

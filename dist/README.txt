@@ -1,11 +1,14 @@
 ﻿# CompassNavigationOverhaul
 
-Version 1.1.7
+Version 1.2.0
 
 https://www.nexusmods.com/skyrimspecialedition/mods/74484
 
 WHAT CHANGED
 ------------
+
+Version 1.2.0
+New Text size slider on the settings page: makes the compass's own text - marker names, objectives and distances - smaller or larger (0.75 to 2.00), for reading the compass on a TV. A missing or wrong Address Library now shows the mod's own message naming the file it needs, instead of a bare error box.
 
 Version 1.1.7
 Fixed location markers disappearing from the compass while many quests are active (1.1.6 let quest markers take all 48 compass slots). The quest marker limit now defaults to 32, which always leaves room for location markers; uQuestMarkerLimit in the INI still goes up to 48.

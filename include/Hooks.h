@@ -37,12 +37,19 @@ namespace hooks
 	public:
 
 		static inline REL::Relocation<bool(*)(const RE::HUDMarkerManager*, RE::TESQuest**,
-											  RE::BSTArray<RE::TESQuestTarget>*)> UpdateQuests{ UpdateQuestsId };
+											  RE::BSTArray<RE::TESQuestTarget>*)> UpdateQuests;   // set by Resolve(), never at DLL load
 
-		static inline REL::Relocation<bool(*)(const RE::HUDMarkerManager*)> UpdateLocations{ UpdateLocationsId };
+		static inline REL::Relocation<bool(*)(const RE::HUDMarkerManager*)> UpdateLocations;   // set by Resolve(), never at DLL load
 
 		static inline REL::Relocation<bool(*)(const RE::HUDMarkerManager*, RE::HUDMarker::ScaleformData*,
-											  RE::NiPoint3*, const RE::RefHandle&, std::int32_t)> AddMarker{ AddMarkerId };
+											  RE::NiPoint3*, const RE::RefHandle&, std::int32_t)> AddMarker;   // set by Resolve(), never at DLL load
+
+		static void Resolve()
+		{
+			UpdateQuests = decltype(UpdateQuests){ UpdateQuestsId };
+			UpdateLocations = decltype(UpdateLocations){ UpdateLocationsId };
+			AddMarker = decltype(AddMarker){ AddMarkerId };
+		}
 	};
 
 	class HUDMenu
@@ -51,7 +58,9 @@ namespace hooks
 
 	public:
 
-		static inline REL::Relocation<RE::UI_MESSAGE_RESULTS(*)(const RE::HUDMenu*, RE::UIMessage&)> ProcessMessage{ ProcessMessageId };
+		static inline REL::Relocation<RE::UI_MESSAGE_RESULTS(*)(const RE::HUDMenu*, RE::UIMessage&)> ProcessMessage;   // set by Resolve(), never at DLL load
+
+		static void Resolve() { ProcessMessage = decltype(ProcessMessage){ ProcessMessageId }; }
 	};
 
 	class Compass
@@ -60,10 +69,16 @@ namespace hooks
 		static constexpr REL::RelocationID UpdateId{ 50773, 51668 };
 
 	public:
-		static inline REL::Relocation<std::uintptr_t> vTable{ RE::VTABLE_Compass[0] };
+		static REL::Relocation<std::uintptr_t> VTable() { return REL::Relocation<std::uintptr_t>{ RE::VTABLE_Compass[0] }; }
 
-		static inline REL::Relocation<bool (*)(RE::Compass*)> SetMarkers{ SetMarkersId };
-		static inline REL::Relocation<void (*)(RE::Compass*)> Update{ UpdateId };
+		static inline REL::Relocation<bool (*)(RE::Compass*)> SetMarkers;   // set by Resolve(), never at DLL load
+		static inline REL::Relocation<void (*)(RE::Compass*)> Update;   // set by Resolve(), never at DLL load
+
+		static void Resolve()
+		{
+			SetMarkers = decltype(SetMarkers){ SetMarkersId };
+			Update = decltype(Update){ UpdateId };
+		}
 	};
 
 	// The game caps quest markers at 16 with a `cmp dword ptr [reg+0x14BC], 16; jae` inside
@@ -93,6 +108,15 @@ namespace hooks
 		// Recorded before anything is written, so a status query after a partial install can
 		// tell "hooks::Install() never ran" apart from "it ran and stopped part way".
 		diagnostics::RecordHookInstallStarted();
+
+		// The game functions above are resolved here, first, and never where they are declared: a static
+		// REL::Relocation built from an Address Library ID is constructed by the C runtime while the DLL loads - before
+		// SKSEPluginLoad - and constructing it opens the Address Library, so a missing or wrong one showed
+		// CommonLibSSE-NG's bare box before the Address Library guard could run (gate row
+		// no-address-resolved-at-static-init; the Infinity UI 2.1.3 fix).
+		HUDMarkerManager::Resolve();
+		HUDMenu::Resolve();
+		Compass::Resolve();
 
 		// `HUDMarkerManager::UpdateQuests` (call to `HUDMarkerManager::AddMarker`)
 		struct UpdateQuestsHook : Hook<5>
@@ -216,7 +240,7 @@ namespace hooks
 		defaultTrampoline.write_call(updatePlayerSetMarkerHook);
 		diagnostics::RecordHookGroupInstalled(diagnostics::HookGroup::kUpdatePlayerSetMarker);
 
-		Compass::vTable.write_vfunc(1, UpdateCompass);
+		Compass::VTable().write_vfunc(1, UpdateCompass);
 		diagnostics::RecordHookGroupInstalled(diagnostics::HookGroup::kCompassUpdateVFunc);
 
 		// Last, and not one of the trampoline groups: a one-byte data patch inside UpdateQuests, needing no trampoline

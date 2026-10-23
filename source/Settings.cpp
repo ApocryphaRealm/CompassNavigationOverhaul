@@ -40,6 +40,7 @@ namespace settings
 			float angleToShowMarkerDetails;
 			float angleToKeepMarkerDetailsShown;
 			float focusingDelayToShow;
+			float textScale;
 			std::uint32_t questMarkerLimit;
 
 			float positionX;
@@ -71,6 +72,7 @@ namespace settings
 			defaults.angleToShowMarkerDetails = display::angleToShowMarkerDetails;
 			defaults.angleToKeepMarkerDetailsShown = display::angleToKeepMarkerDetailsShown;
 			defaults.focusingDelayToShow = display::focusingDelayToShow;
+			defaults.textScale = display::textScale;
 			defaults.questMarkerLimit = display::questMarkerLimit;
 
 			defaults.positionX = questlist::positionX;
@@ -556,6 +558,7 @@ namespace settings
 				angleToShowMarkerDetails = Read<float>(c, "fAngleToShowMarkerDetails:Display", angleToShowMarkerDetails);
 				angleToKeepMarkerDetailsShown = Read<float>(c, "fAngleToKeepMarkerDetailsShown:Display", angleToKeepMarkerDetailsShown);
 				focusingDelayToShow = Read<float>(c, "fFocusingDelayToShow:Display", focusingDelayToShow);
+				textScale = std::clamp(Read<float>(c, "fTextScale:Display", textScale), kTextScaleMin, kTextScaleMax);
 
 				// Clamped, not trusted: it is written into a one-byte immediate in the game's code, and anything outside
 				// 16..48 is either below vanilla or more than the 48-slot marker array holds.
@@ -611,6 +614,7 @@ namespace settings
 			add("fAngleToShowMarkerDetails:Display", angleToShowMarkerDetails);
 			add("fAngleToKeepMarkerDetailsShown:Display", angleToKeepMarkerDetailsShown);
 			add("fFocusingDelayToShow:Display", focusingDelayToShow);
+			add("fTextScale:Display", textScale);
 			add("uQuestMarkerLimit:Display", questMarkerLimit);
 		}
 
@@ -704,6 +708,7 @@ namespace settings
 		ok &= WriteFloat(kDisplaySection, "fAngleToShowMarkerDetails", display::angleToShowMarkerDetails);
 		ok &= WriteFloat(kDisplaySection, "fAngleToKeepMarkerDetailsShown", display::angleToKeepMarkerDetailsShown);
 		ok &= WriteFloat(kDisplaySection, "fFocusingDelayToShow", display::focusingDelayToShow);
+		ok &= WriteFloat(kDisplaySection, "fTextScale", display::textScale);
 		ok &= WriteUInt(kDisplaySection, "uQuestMarkerLimit", display::questMarkerLimit);
 
 		ok &= WriteFloat(kQuestListSection, "fPositionX", questlist::positionX);
@@ -750,6 +755,7 @@ namespace settings
 		display::angleToShowMarkerDetails = defaults.angleToShowMarkerDetails;
 		display::angleToKeepMarkerDetailsShown = defaults.angleToKeepMarkerDetailsShown;
 		display::focusingDelayToShow = defaults.focusingDelayToShow;
+		display::textScale = defaults.textScale;
 		display::questMarkerLimit = defaults.questMarkerLimit;
 
 		questlist::positionX = defaults.positionX;

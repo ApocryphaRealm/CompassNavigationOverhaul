@@ -25,6 +25,25 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.2.0 - 2026-10-23 - untested
+
+### Added
+- **Text size** slider on the settings page (Compass and markers): scales the text the compass draws - the focused
+  marker's name or objective, its distance and the height arrow beside it - from 0.75 to 2.00 (default 1.00, the size
+  it has always had). It applies as the slider moves, is saved with Save (`fTextScale` in [Display]), is put back by
+  Restore defaults, and the saved size is applied whenever the compass movie is set up. A player could not read the
+  compass on a TV (the owner, 2026-10-23). In all eleven languages.
+- DevBench `compassnavigationoverhaul.status`: a `textScale` block (the setting, what last reached the movie, and
+  whether it did), and `op=textscale value=<0.75..2.00>`, which does what the slider does.
+
+### Fixed
+- **A missing or wrong Address Library now gets the Address Library guard's message, not CommonLibSSE-NG's bare box.**
+  Hooks.h built HUDMarkerManager UpdateQuests / UpdateLocations / AddMarker, HUDMenu::ProcessMessage, the Compass
+  vtable and Compass SetMarkers / Update as static REL::Relocations. The C runtime constructs those while the DLL
+  loads - before SKSEPluginLoad - and constructing one opens the Address Library, so the guard never got to run. They
+  are now resolved at the start of hooks::Install() (gate row no-address-resolved-at-static-init; the Infinity UI 2.1.3
+  fix). No change to what the hooks do.
+
 ## 1.1.7 - 2026-10-08 - working
 
 ### Fixed
