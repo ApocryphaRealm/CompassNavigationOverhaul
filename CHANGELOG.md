@@ -25,6 +25,14 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.2.1 - 2026-10-24 - untested
+
+### Fixed
+- **Holding an arrow key on a selected slider now keeps nudging it.** The press that nudged the slider was also a
+  keyboard-navigation move, so the menu's focus jumped to the next control and the hold stopped after one step (found
+  on Dragon's Eye Minimap's identical slider, test 36ae, 2026-10-24). The slider that takes the arrow now cancels that
+  move (ImGui NavMoveRequestCancel, added to the required exports).
+
 ## 1.2.0 - 2026-10-23 - working
 
 ### Added

@@ -63,6 +63,7 @@ namespace UI
 				// precise::SliderFloat (include/PreciseSlider.h, rule 68) asks these to tell a nudge from a drag.
 				"igIsKeyDown_Nil",
 				"igIsMouseDown_Nil",
+				"igNavMoveRequestCancel",   // the selected slider keeps the arrow keys (NudgeableSlider)
 				// Needed by NudgeableSlider's arrow-key nudge (ported from Dragon's Eye
 				// Minimap's UI.cpp - CLAUDE.md rule 24).
 				"igIsKeyPressed_Bool",
@@ -134,6 +135,12 @@ namespace UI
 				{
 					*a_value = std::clamp(*a_value + nudge, a_min, a_max);
 					changed = true;
+				}
+				// The arrow is this slider's: cancel the keyboard-navigation move ImGui made from the same press, or focus
+				// jumps to the next control and a held key stops after one step (Dragon's Eye Minimap, test 36ae).
+				if (nudge != 0.0F)
+				{
+					ImGuiMCP::NavMoveRequestCancel();
 				}
 
 				ImGuiMCP::SameLine();
