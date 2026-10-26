@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -33,12 +34,15 @@ namespace UI
 
 		// The framework renders from the renderer's present hook, which is not the thread
 		// Scaleform and the rest of the game expect to be talked to. Anything that reaches into
-		// the compass or the rest of the HUD has to be handed to the main thread first.
+		// the compass or the rest of the HUD has to be handed to the UI thread first.
+		// 1.2.1: AddUITask, not AddTask. SKSE runs UI tasks inside the UI's own message processing, the thread the HUD
+		// movie advances on; AddTask's queue runs as its own BSJobs job on 1.5.97, beside the UI job, so Scaleform calls
+		// made from it race the HUD movie (Dragon's Eye Minimap 1.7.5 crashed that way with a held slider).
 		void OnMainThread(std::function<void()> a_task)
 		{
 			if (auto* taskInterface = SKSE::GetTaskInterface())
 			{
-				taskInterface->AddTask(std::move(a_task));
+				taskInterface->AddUITask(std::move(a_task));
 			}
 		}
 
@@ -171,62 +175,136 @@ namespace UI
 			});
 		}
 
-		// 1.2.0: the compass text's size, applied as the slider moves (the owner, 2026-10-23: a player could not read the
-		// compass on a TV). Queued like the quest list's move: one task at a time, which reads the value when it runs.
-		std::atomic<bool> textScaleQueued{ false };
+		// ---- Slider-driven re-applies (1.2.1) ----------------------------------------------------------------------
+		// The Text size and quest-list sliders change every frame while a key is held or the mouse drags. Until 1.2.1
+		// each change queued its apply through SKSE's AddTask, whose queue on 1.5.97 runs as its own BSJobs job beside
+		// the UI job that advances the HUD movie, so the SetMember / Invoke / localToGlobal calls raced the movie - the
+		// shape that crashed Dragon's Eye Minimap 1.7.5 under a held slider. Now the page only raises a flag (safe from
+		// any thread); the compass's own per-frame Update (hooks::UpdateCompass, on the HUD's thread) serves it at most
+		// once per kLiveApplyInterval with the values current at that moment, so a held arrow or a fast drag ends in one
+		// apply of the final value. When the compass has not updated for kHudStalledAfter, one SKSE UI task serves it
+		// instead. The applies are never re-entrant. Same pattern as Dragon's Eye Minimap 1.7.6 (commit c23a199).
+		constexpr std::chrono::milliseconds kLiveApplyInterval{ 120 };
+		constexpr std::chrono::milliseconds kHudStalledAfter{ 250 };
+
+		std::atomic<bool> textScaleRequested{ false };
+		std::atomic<bool> questListMoveRequested{ false };
+		std::atomic<bool> liveApplyFallbackQueued{ false };
+		std::atomic<std::int64_t> lastLiveApplyTicks{ 0 };   // steady_clock ticks of the last apply
+		std::atomic<std::int64_t> lastServiceTicks{ 0 };     // steady_clock ticks of the last compass Update
+		bool liveApplyInProgress = false;                    // UI-thread re-entrancy guard
+
+		std::int64_t NowTicks()
+		{
+			return std::chrono::steady_clock::now().time_since_epoch().count();
+		}
+
+		template <class Duration>
+		std::int64_t Ticks(Duration a_duration)
+		{
+			return std::chrono::duration_cast<std::chrono::steady_clock::duration>(a_duration).count();
+		}
+
+		// 1.2.0: the compass text's size (the owner, 2026-10-23: a player could not read the compass on a TV).
+		// UI thread only - ServeLiveApplies() calls it.
+		void ApplyTextScaleNow()
+		{
+			const float scale = settings::display::textScale;
+			auto* compass = CNO::Compass::GetSingleton();
+			if (!compass)
+			{
+				logger::debug("Compass text size {:.2f} kept for when the compass movie is set up", scale);
+				return;
+			}
+			const char* clip = compass->SetTextScale(scale);
+			diagnostics::RecordTextScaleApplied(scale, clip);
+			logger::debug("Compass text size {:.2f} {} {}", scale, clip ? "applied to" : "not applied: no focused-marker clip in",
+				clip ? clip : "the compass movie");
+		}
+
+		// 1.1.7: Position X/Y and Max height move the quest list as they change (blckknight119's live-move request);
+		// before this they reached the movie only once, at start-up. UI thread only - ServeLiveApplies() calls it.
+		void ApplyQuestListPositionNow()
+		{
+			if (auto* questItemList = QuestItemList::GetSingleton())
+			{
+				questItemList->ApplyPosition();
+
+				const RE::GPointF screen = questItemList->LocalToGlobal();
+				diagnostics::RecordQuestListMoved(screen.x, screen.y);
+
+				logger::debug("Quest list moved to X {:.3f}, Y {:.3f}, max height {:.3f} (screen {:.1f}, {:.1f})",
+					settings::questlist::positionX, settings::questlist::positionY, settings::questlist::maxHeight,
+					screen.x, screen.y);
+			}
+		}
+
+		// UI thread only. a_ignoreInterval: the UI-task fallback applies at once, since it runs once per request.
+		void ServeLiveApplies(bool a_ignoreInterval)
+		{
+			if (liveApplyInProgress || (!textScaleRequested.load() && !questListMoveRequested.load()))
+			{
+				return;
+			}
+
+			if (!a_ignoreInterval && NowTicks() - lastLiveApplyTicks.load() < Ticks(kLiveApplyInterval))
+			{
+				return;   // the flags stay up, so the final value is applied once the interval has passed
+			}
+
+			liveApplyInProgress = true;
+			lastLiveApplyTicks.store(NowTicks());
+
+			// Cleared BEFORE applying: a change made while the apply runs raises the flag again and is applied next time.
+			if (textScaleRequested.exchange(false))
+			{
+				ApplyTextScaleNow();
+			}
+			if (questListMoveRequested.exchange(false))
+			{
+				ApplyQuestListPositionNow();
+			}
+
+			liveApplyInProgress = false;
+		}
+
+		// Any thread: raises the flag, and hands it to one UI task only when the compass has stopped updating.
+		void RequestLiveApply(std::atomic<bool>& a_flag)
+		{
+			a_flag.store(true);
+
+			const auto lastService = lastServiceTicks.load();
+			if (lastService != 0 && NowTicks() - lastService < Ticks(kHudStalledAfter))
+			{
+				return;   // the compass's next Update picks it up
+			}
+
+			if (liveApplyFallbackQueued.exchange(true))
+			{
+				return;   // one is already waiting; it reads the values current when it runs
+			}
+
+			if (auto* taskInterface = SKSE::GetTaskInterface())
+			{
+				taskInterface->AddUITask([]() {
+					liveApplyFallbackQueued.store(false);
+					ServeLiveApplies(true);
+				});
+			}
+			else
+			{
+				liveApplyFallbackQueued.store(false);
+			}
+		}
 
 		void ApplyTextScale()
 		{
-			if (textScaleQueued.exchange(true))
-			{
-				return;
-			}
-
-			OnMainThread([]() {
-				textScaleQueued = false;
-
-				const float scale = settings::display::textScale;
-				auto* compass = CNO::Compass::GetSingleton();
-				if (!compass)
-				{
-					logger::debug("Compass text size {:.2f} kept for when the compass movie is set up", scale);
-					return;
-				}
-				const char* clip = compass->SetTextScale(scale);
-				diagnostics::RecordTextScaleApplied(scale, clip);
-				logger::debug("Compass text size {:.2f} {} {}", scale, clip ? "applied to" : "not applied: no focused-marker clip in",
-					clip ? clip : "the compass movie");
-			});
+			RequestLiveApply(textScaleRequested);
 		}
 
-		// Set while a move is queued for the main thread, so a slider dragged across many frames queues one task at a
-		// time rather than one per frame; the task reads the values when it runs, so the last one always lands.
-		std::atomic<bool> questListMoveQueued{ false };
-
-		// 1.1.7: Position X/Y and Max height move the quest list as they change (blckknight119's live-move request);
-		// before this they reached the movie only once, at start-up.
 		void ApplyQuestListPosition()
 		{
-			if (questListMoveQueued.exchange(true))
-			{
-				return;
-			}
-
-			OnMainThread([]() {
-				questListMoveQueued = false;
-
-				if (auto* questItemList = QuestItemList::GetSingleton())
-				{
-					questItemList->ApplyPosition();
-
-					const RE::GPointF screen = questItemList->LocalToGlobal();
-					diagnostics::RecordQuestListMoved(screen.x, screen.y);
-
-					logger::debug("Quest list moved to X {:.3f}, Y {:.3f}, max height {:.3f} (screen {:.1f}, {:.1f})",
-						settings::questlist::positionX, settings::questlist::positionY, settings::questlist::maxHeight,
-						screen.x, screen.y);
-				}
-			});
+			RequestLiveApply(questListMoveRequested);
 		}
 
 		void RenderDisplaySection()
@@ -411,6 +489,12 @@ namespace UI
 		ApplyUseMetricUnits();
 		ApplyTextScale();
 		ApplyQuestListPosition();
+	}
+
+	void ServiceLiveApplies()
+	{
+		lastServiceTicks.store(NowTicks());
+		ServeLiveApplies(false);
 	}
 
 	void SetTextScale(float a_scale)

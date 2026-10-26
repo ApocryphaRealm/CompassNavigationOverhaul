@@ -4,6 +4,7 @@
 #include "Settings.h"
 
 #include "HUDMarkerManager.h"
+#include "UI.h"
 
 namespace hooks
 {
@@ -378,6 +379,10 @@ namespace hooks
 
 		CNO::HUDMarkerManager::GetSingleton()->SetMarkersExtraInfo();
 		diagnostics::RecordMarkerFrameEnd();
+
+		// Settings-page changes (Text size, quest-list position) are applied here, on the HUD's own thread, coalesced
+		// to one apply per 120 ms with the latest values (1.2.1).
+		UI::ServiceLiveApplies();
 	}
 
 	namespace compat

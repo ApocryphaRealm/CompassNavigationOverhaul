@@ -16,6 +16,10 @@ namespace UI
 	// slider does - the DevBench op=textscale drives it.
 	void SetTextScale(float a_scale);
 
+	// 1.2.1: serves the settings page's pending Text size / quest-list re-applies, at most once per 120 ms with the
+	// latest values. HUD thread only - hooks::UpdateCompass calls it every frame from the compass's own Update.
+	void ServiceLiveApplies();
+
 	namespace SettingsPanel
 	{
 		void __stdcall Render();

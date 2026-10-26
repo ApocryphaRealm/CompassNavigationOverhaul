@@ -25,9 +25,21 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
-## 1.2.1 - 2026-10-24 - untested
+## 1.2.1 - 2026-10-25 - untested
 
 ### Fixed
+- **Holding or dragging the Text size and quest-list Position X / Position Y / Max height sliders can no longer crash
+  the game.** Each change was applied to the HUD through SKSE's AddTask, whose queue on Skyrim 1.5.97 runs beside the
+  UI job that advances the HUD movie, so the compass and quest-list movie calls raced the movie itself - the shape that
+  crashed Dragon's Eye Minimap 1.7.5 under a held slider (2026-10-25). The settings page now only flags the change;
+  the compass's own per-frame update applies it on the HUD's thread, at most once every 120 ms and always with the
+  latest values, so the final value always lands (one UI task does it when the HUD is not updating). Use metric
+  units, Save, Reload and Restore defaults go through SKSE's UI task queue instead of AddTask. Same pattern as
+  Dragon's Eye Minimap 1.7.6 (commit c23a199). Gate rows scaleform-calls-only-on-the-ui-thread and
+  scaleform-helpers-only-on-the-ui-thread pass.
+- **A value typed into a slider (Ctrl+click) stays inside the slider's range.** The precise-slider wrapper now passes
+  ImGuiSliderFlags_AlwaysClamp and clamps again after the call (gate row precise-sliders-always-clamp; reference
+  Dragon's Eye Minimap 7c3ce18).
 - **Holding an arrow key on a selected slider now keeps nudging it.** The press that nudged the slider was also a
   keyboard-navigation move, so the menu's focus jumped to the next control and the hold stopped after one step (found
   on Dragon's Eye Minimap's identical slider, test 36ae, 2026-10-24). The slider that takes the arrow now cancels that

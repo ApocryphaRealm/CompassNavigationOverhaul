@@ -1,11 +1,14 @@
 ﻿# CompassNavigationOverhaul
 
-Version 1.2.0
+Version 1.2.1
 
 https://www.nexusmods.com/skyrimspecialedition/mods/74484
 
 WHAT CHANGED
 ------------
+
+Version 1.2.1
+Fixed a crash when holding an arrow key on, or quickly dragging, the Text size or quest list Position X / Position Y / Max height sliders: the changes now reach the HUD on its own thread, a few times a second at most, and the last value always lands. Holding an arrow key on a selected slider keeps nudging it. A number typed into a slider stays inside its range.
 
 Version 1.2.0
 New Text size slider on the settings page: makes the compass's own text - marker names, objectives and distances - smaller or larger (0.75 to 2.00), for reading the compass on a TV. A missing or wrong Address Library now shows the mod's own message naming the file it needs, instead of a bare error box.
