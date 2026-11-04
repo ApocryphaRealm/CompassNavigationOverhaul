@@ -293,35 +293,34 @@ namespace CNO
 		{
 			std::string focusedMarkerDescription = focusedMarker->description;
 
-			if (settings::display::showObjectiveAsTarget && settings::display::showOtherObjectivesCount)
+			// Whether this is a quest marker decides the quest list below, so it is worked out whichever way the text under the
+			// compass is set: the list does not depend on Show Objective as Target or the objectives count.
+			int objectivesCount = 0;
+
+			if (questItems.contains(focusedMarker->ref))
 			{
-				int objectivesCount = 0;
+				isFocusedQuestMarker = true;
 
-				if (questItems.contains(focusedMarker->ref))
+				std::unordered_map<RE::TESQuest*, QuestItem>& questItemMap = questItems[focusedMarker->ref];
+
+				for (auto& [quest, questItem] : questItemMap)
 				{
-					isFocusedQuestMarker = true;
-
-					std::unordered_map<RE::TESQuest*, QuestItem>& questItemMap = questItems[focusedMarker->ref];
-
-					for (auto& [quest, questItem] : questItemMap)
-					{
-						objectivesCount += questItem.objectives.size();
-					}
-				}
-
-				if (miscQuestItem.contains(focusedMarker->ref))
-				{
-					isFocusedQuestMarker = true;
-
-					QuestItem& questItem = miscQuestItem[focusedMarker->ref];
-
 					objectivesCount += questItem.objectives.size();
 				}
+			}
 
-				if (objectivesCount > 1)
-				{
-					focusedMarkerDescription += " (+" + std::to_string(objectivesCount - 1) + ")";
-				}
+			if (miscQuestItem.contains(focusedMarker->ref))
+			{
+				isFocusedQuestMarker = true;
+
+				QuestItem& questItem = miscQuestItem[focusedMarker->ref];
+
+				objectivesCount += questItem.objectives.size();
+			}
+
+			if (settings::display::showObjectiveAsTarget && settings::display::showOtherObjectivesCount && objectivesCount > 1)
+			{
+				focusedMarkerDescription += " (+" + std::to_string(objectivesCount - 1) + ")";
 			}
 
 			compass->SetFocusedMarkerInfo(focusedMarkerDescription, focusedMarker->distanceToPlayer,

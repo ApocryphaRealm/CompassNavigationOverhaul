@@ -25,6 +25,11 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.2.2 - 2026-11-04 - untested
+
+### Fixed
+- The quest list no longer depends on Show Objective as Target or the objectives count: with either off it disappeared, so it could not be used on its own (a player's report).
+
 ## 1.2.1 - 2026-10-25 - untested
 
 ### Fixed
