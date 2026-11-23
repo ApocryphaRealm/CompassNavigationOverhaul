@@ -371,6 +371,22 @@ namespace CNO
 				compass->FocusMarker(focusedMarker->index);
 			}
 
+			// 1.2.4: the wired SetMarkers recreates every marker clip, so the name is pointed at this frame's clip of
+			// the focused slot each frame (Compass::RepointFocusedMarker). Not needed with the HUD's own function.
+			if (compass->IsUnknownMarkerWired())
+			{
+				// the last result, so the log line is written only when it changes
+				static std::optional<bool> lastRepointOk;
+
+				const bool repointed = compass->RepointFocusedMarker(focusedMarker->index);
+				if (lastRepointOk != repointed)
+				{
+					lastRepointOk = repointed;
+					logger::info("Focused marker re-pointed to this frame's clip: {} (slot {})", repointed ? "yes" : "NO",
+								 focusedMarker->index);
+				}
+			}
+
 			compass->UpdateFocusedMarker(focusedMarker->index);
 		}
 

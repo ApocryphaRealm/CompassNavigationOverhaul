@@ -25,6 +25,11 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.2.4 - 2026-11-23 - untested
+
+### Fixed
+- With Show undiscovered location markers on, the name and distance under the compass could stay on a marker that was gone or sit under the wrong marker (bug 1179030). Since 1.2.3 the compass movie redraws every marker each update; the name is now pointed at the focused marker's current icon every frame.
+
 ## 1.2.3 - 2026-11-22 - untested
 
 ### Fixed

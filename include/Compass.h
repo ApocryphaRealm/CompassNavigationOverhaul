@@ -192,6 +192,50 @@ namespace CNO
 			Invoke("UnfocusMarker");
 		}
 
+		// 1.2.4 (bug 1179030). With SetMarkers wired (1.2.3), the shipped movies remove and re-attach EVERY marker clip on
+		// each SetCompassMarkers call, while their FocusMarker stores the focused clip only when the focus changes and
+		// their UpdateFocusedMarker keeps placing the name on that stored clip - a clip that has since been removed, or
+		// whose name now belongs to another slot's marker once markers enter or leave range. The HUD's own function,
+		// used until 1.2.2, kept the clips, so the stored one stayed valid. The stored clip and index are pointed at
+		// this frame's clip for the focused slot before UpdateFocusedMarker runs (the same thing the Vibrant Map
+		// Markers movie's UpdateFocusedMarker does itself). Returns false when the clip or the slot is not there.
+		bool RepointFocusedMarker(std::uint32_t a_focusedMarkerIndex)
+		{
+			RE::GFxMovieView* view = GetMovieView();
+			if (!view)
+			{
+				return false;
+			}
+
+			RE::GFxValue markerList;
+			if (!view->GetVariable(&markerList, "_level0.HUDMovieBaseInstance.CompassMarkerList") || !markerList.IsArray() ||
+				a_focusedMarkerIndex >= markerList.GetArraySize())
+			{
+				return false;
+			}
+
+			RE::GFxValue entry;
+			RE::GFxValue movie;
+			if (!markerList.GetElement(a_focusedMarkerIndex, &entry) || !entry.IsObject() ||
+				!entry.GetMember("movie", &movie) || !movie.IsDisplayObject())
+			{
+				return false;
+			}
+
+			constexpr const char* kClips[] = { "FocusedMarkerInstance", "FocusedMarkerInfo" };
+			for (const char* name : kClips)
+			{
+				RE::GFxValue clip = GetMember(name);
+				if (clip.IsDisplayObject())
+				{
+					const RE::GFxValue index{ static_cast<double>(a_focusedMarkerIndex) };
+					return clip.SetMember("Movie", movie) && clip.SetMember("Index", index);
+				}
+			}
+
+			return false;
+		}
+
 		void UpdateFocusedMarker(std::uint32_t a_focusedMarkerIndex)
 		{
 			Invoke("UpdateFocusedMarker", a_focusedMarkerIndex);
