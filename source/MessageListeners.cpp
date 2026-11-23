@@ -68,7 +68,7 @@ void SKSEMessageListener(SKSE::MessagingInterface::Message* a_msg)
 			}
 			else
 			{
-				logger::warn("CoMAP compatibility patch was not applied; CoMAP and this mod will both run, unpatched");
+				logger::info("CoMAP compatibility patch was not applied (reason logged above); CoMAP and this mod both run");
 
 				// No RecordComapPatchSkipped() here on purpose: both of Install()'s own
 				// `return false` paths record their specific reason at the point the decision

@@ -49,6 +49,54 @@ namespace CNO
 				textBaseY.reset();
 
 				Invoke("Compass");
+
+				WireSetCompassMarkers();
+			}
+		}
+
+		// True when HUDMenu.SetCompassMarkers is this movie's own SetMarkers, so a marker whose icon is 0 is drawn as
+		// the movie's "Compass Marker Unknown" ("?"). With the vanilla SetCompassMarkers an icon of 0 lands on frame 1,
+		// the quest arrow - the small "v" seen in CNO 1.2.2.
+		bool IsUnknownMarkerWired() const { return unknownMarkerWired; }
+
+		// 1.2.3. Upstream's newer swf\Compass.as assigns HUDMenu.SetCompassMarkers = SetMarkers in its constructor
+		// (commit 6f6cb8e, which also removed the DLL's call-site hook), but the shipped Compass.swf - ours, and Norden
+		// UI's, read with FFDec 2026-11-22 - defines SetMarkers and never assigns it. The assignment is made here, the
+		// same one upstream's AS makes: no game address, so SE, AE and 1.7 take the same path. A third-party movie
+		// with no SetMarkers keeps the vanilla function, and the unknown-marker setting then leaves the game's own
+		// undiscovered icon rather than drawing the quest arrow.
+		void WireSetCompassMarkers()
+		{
+			unknownMarkerWired = false;
+
+			RE::GFxValue setMarkers = GetMember("SetMarkers");
+			RE::GFxMovieView* view = GetMovieView();
+
+			if (!setMarkers.IsObject() || !view)
+			{
+				logger::warn("SetCompassMarkers override NOT wired: the compass movie {} has no SetMarkers function; "
+							 "undiscovered locations keep the game's own icon when \"Undiscovered means unknown marker\" is on",
+							 ToString().c_str());
+				return;
+			}
+
+			RE::GFxValue hudMenu;
+			if (!view->GetVariable(&hudMenu, "_level0.HUDMovieBaseInstance") || !hudMenu.IsDisplayObject())
+			{
+				logger::warn("SetCompassMarkers override NOT wired: _level0.HUDMovieBaseInstance was not found");
+				return;
+			}
+
+			unknownMarkerWired = hudMenu.SetMember("SetCompassMarkers", setMarkers);
+
+			if (unknownMarkerWired)
+			{
+				logger::info("SetCompassMarkers override wired: HUDMenu.SetCompassMarkers is now {}.SetMarkers "
+							 "(unknown marker drawn by the compass movie)", ToString().c_str());
+			}
+			else
+			{
+				logger::warn("SetCompassMarkers override NOT wired: setting HUDMenu.SetCompassMarkers failed");
 			}
 		}
 
@@ -195,6 +243,7 @@ namespace CNO
 		}
 
 		std::optional<double> textBaseY;   // FocusedMarkerInstance's authored _y in the current movie
+		bool unknownMarkerWired = false;   // see WireSetCompassMarkers
 
 		static inline Compass* singleton = nullptr;
 	};

@@ -64,6 +64,13 @@ namespace CNO
 
 		void ReconcilePendingQuestMarkers();
 
+		// 1.2.3: logs, once per marker reference, the icon number the game (and any mod ahead of this one, such as Map
+		// Marker Framework) handed the compass for an undiscovered location, beside the game's own undiscovered frame
+		// for its type - so a test can read which art a frame number should draw.
+		void LogUndiscoveredIconOnce(RE::TESObjectREFR* a_marker, RE::ExtraMapMarker* a_mapMarker, const RE::GFxValue& a_icon);
+
+		std::unordered_set<RE::FormID> loggedUndiscoveredIcons;
+
 		// A frame whose compass update is skipped (the singletons not ready yet) must not carry its pending markers
 		// and claims into the next frame, where they would be matched against a different marker array.
 		void DiscardPendingQuestMarkers()

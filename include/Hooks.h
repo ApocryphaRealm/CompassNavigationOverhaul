@@ -288,6 +288,23 @@ namespace hooks
 				// 0 + 6 = 6 and get hooked there - not a hypothetical, this class of unchecked
 				// lookup is exactly what caused a real crash elsewhere in this project. Skip
 				// the patch instead of hooking a bogus address.
+				// 1.2.3: Map Marker Framework builds for CoMAP 4 (seen: the 1.5 build reporting version 2, in Njordlinger
+				// 2026-11-22) register for Infinity UI's messages themselves and import their icons into the replaced
+				// compass at this exact path - the job this patch did for older builds. Their SetupHUDMenu no longer
+				// has the pattern below, and none is needed: the custom icons showed in game without it.
+				if (!getCompassMovieDefHookPattern &&
+					SigScanner::ContainsText(a_moduleHandle, "_level0.HUDMovieBaseInstance.CompassShoutMeterHolder.Compass"))
+				{
+					logger::info("CoMAP compatibility: this MapMarkerFramework.dll handles Infinity UI's compass itself; "
+								 "no patch needed");
+
+					diagnostics::RecordComapPatchNotAttempted("not needed: this MapMarkerFramework.dll registers for "
+															  "Infinity UI messages and imports its icons into the "
+															  "replaced compass itself");
+
+					return false;
+				}
+
 				if (!getCompassMovieDefHookPattern)
 				{
 					logger::error("CoMAP compatibility: could not find the expected byte pattern in "

@@ -247,6 +247,27 @@ namespace hooks
 
 			return reinterpret_cast<std::uintptr_t>(nullptr);
 		}
+
+		// Whether the module's image holds a_text (its bytes, no terminator) - used to read what a build of another
+		// plugin supports from its own string table when no version number says so.
+		static bool ContainsText(SKSE::WinAPI::HMODULE a_moduleHandle, std::string_view a_text)
+		{
+			if (!a_moduleHandle || a_text.empty())
+			{
+				return false;
+			}
+
+			MODULEINFO moduleInfo{};
+			if (!GetModuleInformation(GetCurrentProcess(), reinterpret_cast<HMODULE>(a_moduleHandle), &moduleInfo, sizeof(MODULEINFO)))
+			{
+				return false;
+			}
+
+			const auto* begin = static_cast<const char*>(moduleInfo.lpBaseOfDll);
+			const auto* end = begin + moduleInfo.SizeOfImage;
+
+			return std::search(begin, end, a_text.begin(), a_text.end()) != end;
+		}
 	};
 }
 

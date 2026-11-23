@@ -188,10 +188,50 @@ namespace CNO
 			}
 		}
 
-		if (!isDiscoveredLocation && settings::display::undiscoveredMeansUnknownMarkers)
+		// The marker's art follows the game's own test (HUDMarker::GetLocationGotoFrame): a location is undiscovered
+		// until it can be travelled to. kVisible alone (seen, not visited) already gets the game's undiscovered icon,
+		// so the unknown marker follows kCanTravelTo too (1.2.3; 1.2.2 used kVisible and left those markers alone).
+		const bool canTravelTo = a_mapMarker->mapData->flags.all(RE::MapMarkerData::Flag::kCanTravelTo);
+
+		RE::GFxValue& icon = hudMarkerManager->scaleformMarkerData[hudMarkerManager->currentMarkerIndex - 1].icon;
+
+		if (!canTravelTo)
 		{
-			hudMarkerManager->scaleformMarkerData[hudMarkerManager->currentMarkerIndex - 1].icon.SetNumber(0);
+			LogUndiscoveredIconOnce(a_marker, a_mapMarker, icon);
 		}
+
+		// Icon 0 is drawn as the compass movie's "Compass Marker Unknown" only when its SetMarkers is the HUD's
+		// SetCompassMarkers (Compass::WireSetCompassMarkers); with the vanilla function it would be the quest arrow.
+		if (!canTravelTo && settings::display::undiscoveredMeansUnknownMarkers)
+		{
+			Compass* compass = Compass::GetSingleton();
+
+			if (compass && compass->IsUnknownMarkerWired())
+			{
+				icon.SetNumber(0);
+			}
+		}
+	}
+
+	void HUDMarkerManager::LogUndiscoveredIconOnce(RE::TESObjectREFR* a_marker, RE::ExtraMapMarker* a_mapMarker,
+												   const RE::GFxValue& a_icon)
+	{
+		if (!a_marker || !a_mapMarker || !a_mapMarker->mapData ||
+			!loggedUndiscoveredIcons.insert(a_marker->GetFormID()).second)
+		{
+			return;
+		}
+
+		const RE::HUDMarker::FrameOffsets* offsets = RE::HUDMarker::FrameOffsets::GetSingleton();
+		const auto type = static_cast<std::uint32_t>(a_mapMarker->mapData->type.underlying());
+
+		logger::info("Undiscovered location {} ({:08X}, type {}, flags {:#x}): icon handed to the compass {}, game's "
+					 "undiscovered frame for its type {} (offsets: location {}, undiscovered {})",
+					 a_mapMarker->mapData->locationName.GetFullName(), a_marker->GetFormID(), type,
+					 static_cast<std::uint32_t>(a_mapMarker->mapData->flags.underlying()),
+					 a_icon.IsNumber() ? a_icon.GetNumber() : -1.0,
+					 offsets ? offsets->undiscoveredLocation + type - 1 : 0,
+					 offsets ? offsets->location : 0, offsets ? offsets->undiscoveredLocation : 0);
 	}
 
 	void HUDMarkerManager::ProcessEnemyMarker(RE::Character* a_enemy, std::uint32_t a_markerIcon)

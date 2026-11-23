@@ -25,6 +25,16 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 >   through `rules-version.ps1 -Action bump`, both of which take their arithmetic from that same
 >   tool. A number typed by hand is wrong until the tool agrees.
 
+## 1.2.3 - 2026-11-22 - untested
+
+### Fixed
+- With newer Map Marker Framework builds (CoMAP 4), the diagnostics no longer report the CoMAP compatibility patch as "skipped": those builds handle the compass themselves, and the report now says no patch is needed.
+- A location you have seen but not yet visited now counts as undiscovered for the unknown marker, the same way the game itself draws it, so it no longer shows its real icon while its neighbours show "?".
+- With "Undiscovered means unknown marker" on, undiscovered locations on the compass show the unknown-location "?" marker again, as the setting says, instead of a small arrow. Works with this mod's own compass and with UI skins whose compass movie carries the same marker code (Norden UI checked).
+
+### Known
+- With the setting off, an undiscovered location shows the game's own undiscovered icon for its type. If Map Marker Framework is set to obscure undiscovered compass markers ([HUD] bObscuredUndiscovered=1 in MapMarkerFramework.ini - Norden UI ships it that way), that framework draws its own "?" instead; set it to 0 to see the type icons.
+
 ## 1.2.2 - 2026-11-04 - untested
 
 ### Fixed
