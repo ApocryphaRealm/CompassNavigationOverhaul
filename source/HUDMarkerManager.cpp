@@ -385,6 +385,17 @@ namespace CNO
 					logger::info("Focused marker re-pointed to this frame's clip: {} (slot {})", repointed ? "yes" : "NO",
 								 focusedMarker->index);
 				}
+
+				// 1.2.4: the icon sizes follow this frame's focused slot, not the clip the movie compared against
+				// (Compass::ApplyMarkerScales) - the size flicker in the bug-1179030 video.
+				static std::optional<bool> lastScalesOk;
+
+				const bool scaled = compass->ApplyMarkerScales(focusedMarker->index);
+				if (lastScalesOk != scaled)
+				{
+					lastScalesOk = scaled;
+					logger::info("Compass marker sizes set from this frame's focused slot: {}", scaled ? "yes" : "NO");
+				}
 			}
 
 			compass->UpdateFocusedMarker(focusedMarker->index);

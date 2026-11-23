@@ -236,6 +236,68 @@ namespace CNO
 			return false;
 		}
 
+		// 1.2.4 (bug 1179030 follow-up: icon and name size flicker while moving with Show undiscovered on). Norden UI's
+		// SetMarkers enlarges a freshly attached clip only when it is the SAME object as FocusedMarkerInstance.Movie, a
+		// reference to a clip the previous call removed. Whenever the focused marker's slot moves (a marker before it
+		// enters or leaves the list - frequent with undiscovered markers in range) the enlargement lands on another
+		// slot's marker or on none, so the focused icon flips between its normal and enlarged size, and tonight's run
+		// showed it staying small after the set changed. The size is set here from this frame's data instead: every
+		// marker at the movie's own size (CompassTargetDataA scale x SkyHUD's scl_fCompassMarker, capped at 135), the
+		// focused slot at Norden's enlarged size (x 1.325, capped at 150). Our own movie's UpdateFocusedMarker, run
+		// after this, re-applies its 145 cap to the focused one. Returns false when the arrays are not there.
+		bool ApplyMarkerScales(std::uint32_t a_focusedMarkerIndex)
+		{
+			RE::GFxMovieView* view = GetMovieView();
+			if (!view)
+			{
+				return false;
+			}
+
+			RE::GFxValue markerList;
+			RE::GFxValue markersData;
+			if (!view->GetVariable(&markerList, "_level0.HUDMovieBaseInstance.CompassMarkerList") || !markerList.IsArray() ||
+				!view->GetVariable(&markersData, "_level0.HUDMovieBaseInstance.CompassTargetDataA") || !markersData.IsArray())
+			{
+				return false;
+			}
+
+			double skyHUDScaleMult = 1.0;
+			RE::GFxValue skyHUDScale;
+			if (view->GetVariable(&skyHUDScale, "_level0.HUDMovieBaseInstance.scl_fCompassMarker") && skyHUDScale.IsNumber() &&
+				!std::isnan(skyHUDScale.GetNumber()))
+			{
+				skyHUDScaleMult = skyHUDScale.GetNumber();
+			}
+
+			constexpr std::uint32_t kStride = 4;
+			constexpr std::uint32_t kScale = 3;
+
+			const std::uint32_t markersCount = markerList.GetArraySize();
+			const std::uint32_t dataSize = markersData.GetArraySize();
+
+			for (std::uint32_t i = 0; i < markersCount && i * kStride + kScale < dataSize; i++)
+			{
+				RE::GFxValue entry;
+				RE::GFxValue movie;
+				RE::GFxValue scaleValue;
+				if (!markerList.GetElement(i, &entry) || !entry.IsObject() || !entry.GetMember("movie", &movie) ||
+					!movie.IsDisplayObject() || !markersData.GetElement(i * kStride + kScale, &scaleValue) ||
+					!scaleValue.IsNumber())
+				{
+					continue;
+				}
+
+				const double scale = scaleValue.GetNumber() * skyHUDScaleMult;
+				const RE::GFxValue percent{ i == a_focusedMarkerIndex ? (std::min)(150.0, scale * 1.325) :
+																	   (std::min)(135.0, scale) };
+
+				movie.SetMember("_xscale", percent);
+				movie.SetMember("_yscale", percent);
+			}
+
+			return true;
+		}
+
 		void UpdateFocusedMarker(std::uint32_t a_focusedMarkerIndex)
 		{
 			Invoke("UpdateFocusedMarker", a_focusedMarkerIndex);

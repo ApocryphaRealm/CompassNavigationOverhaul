@@ -29,6 +29,7 @@ reclaimed), **scratch** (a hypothesis-test build that never held a real number).
 
 ### Fixed
 - With Show undiscovered location markers on, the name and distance under the compass could stay on a marker that was gone or sit under the wrong marker (bug 1179030). Since 1.2.3 the compass movie redraws every marker each update; the name is now pointed at the focused marker's current icon every frame.
+- With Show undiscovered location markers on, the focused marker's icon could switch between its normal and enlarged size while moving, or another marker could be drawn enlarged instead (bug 1179030, from the reporter's video). The compass movie enlarged whichever new icon matched a reference to an icon it had just removed, which stops matching when markers enter or leave the list. The icon sizes are now set every frame from that frame's markers and focused marker.
 
 ## 1.2.3 - 2026-11-22 - untested
 
